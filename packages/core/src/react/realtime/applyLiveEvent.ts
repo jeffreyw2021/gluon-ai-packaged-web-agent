@@ -4,12 +4,14 @@ import type { UIMessage } from "ai";
 import type { LiveEvent } from "../../types/LiveEvent";
 import type { RunActivityPhase } from "../../types/RunActivityPhase";
 import type { RunPhase } from "../../types/RunPhase";
+import type { TokenUsage } from "../../types/TokenUsage";
 
 export interface LiveRunState {
   phase: RunPhase;
   runId: string | null;
   awaitingApprovalId: string | null;
   activity: RunActivityPhase | null;
+  lastRunUsage: TokenUsage | null;
 }
 
 export const INITIAL_LIVE_RUN_STATE: LiveRunState = {
@@ -17,6 +19,7 @@ export const INITIAL_LIVE_RUN_STATE: LiveRunState = {
   runId: null,
   awaitingApprovalId: null,
   activity: null,
+  lastRunUsage: null,
 };
 
 // Use a completely loose internal message representation to avoid AI SDK part type constraints
@@ -89,6 +92,7 @@ export function applyLiveEvent(
           runId: event.runId,
           awaitingApprovalId: null,
           activity: "round_start",
+          lastRunUsage: null,
         },
       };
     case "run.phase":
@@ -134,22 +138,29 @@ export function applyLiveEvent(
           runId: event.runId,
           awaitingApprovalId: event.approvalIds[0] ?? null,
           activity: "awaiting_user",
+          lastRunUsage: runState.lastRunUsage,
         },
       };
     case "run.completed":
       return {
         messages,
-        runState: { phase: "completed", runId: event.runId, awaitingApprovalId: null, activity: null },
+        runState: {
+          phase: "completed",
+          runId: event.runId,
+          awaitingApprovalId: null,
+          activity: null,
+          lastRunUsage: event.usage ?? null,
+        },
       };
     case "run.failed":
       return {
         messages,
-        runState: { phase: "failed", runId: event.runId, awaitingApprovalId: null, activity: null },
+        runState: { phase: "failed", runId: event.runId, awaitingApprovalId: null, activity: null, lastRunUsage: null },
       };
     case "run.cancelled":
       return {
         messages,
-        runState: { phase: "cancelled", runId: event.runId, awaitingApprovalId: null, activity: null },
+        runState: { phase: "cancelled", runId: event.runId, awaitingApprovalId: null, activity: null, lastRunUsage: null },
       };
     default:
       return { messages, runState };

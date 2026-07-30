@@ -224,7 +224,7 @@ export function MessageList({
       {messages.length > 0 &&
         isLiveRunPhase(runPhase) &&
         messages[messages.length - 1]?.role !== "assistant" && (
-          <ThoughtWindowComp activity={runActivity} />
+          <ThoughtWindowComp activity={runActivity ?? "queued"} />
         )}
 
       <div ref={endRef} aria-hidden />

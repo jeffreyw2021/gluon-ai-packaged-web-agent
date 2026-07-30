@@ -125,7 +125,7 @@ export function AssistantMessage({
       ) : (
         <>
           <ThoughtWindowComp
-            activity={isStreaming ? runActivity : null}
+            activity={isStreaming ? (runActivity ?? "queued") : null}
             reasoningText={reasoning || undefined}
             toolInvocations={toolInvocations.length > 0 ? toolInvocations : undefined}
           />

@@ -119,8 +119,7 @@ export function AgentProvider({
 }: AgentProviderProps) {
   const qc = queryClient ?? defaultQueryClient;
   // Create a stable per-provider Jotai store initialized with the desired panel mode.
-  // useMemo with an empty dep array is intentional — the default is read once at mount.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Empty dep array is intentional — the default is read once at mount.
   const store = useMemo(() => {
     const s = createStore();
     s.set(panelModeAtom, defaultPanelMode);

@@ -5,6 +5,7 @@ import {
   type UIMessage,
 } from "ai";
 import type { LoadedConfig } from "../../config/loader";
+import type { TokenUsage } from "../../types/TokenUsage";
 import { createAgent } from "../agent/createAgent";
 import { prepareUiMessagesForAgent } from "../agent/prepareMessages";
 import { chatJobRunRepository } from "../db/repositories/chatJobRunRepository";
@@ -38,6 +39,7 @@ export interface RoundExecutorResult {
   finishReason: string;
   awaitingUser: boolean;
   pendingApprovalIds: string[];
+  usage: TokenUsage;
 }
 
 async function loadChatForRound(input: RoundExecutorInput): Promise<UIMessage[]> {
@@ -81,6 +83,7 @@ export async function executeRound(
   const agent = createAgent(input.loadedConfig);
 
   let finishReason = "stop";
+  const roundUsage: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
 
   const sdkStream = await createAgentUIStream({
     agent,
@@ -89,6 +92,14 @@ export async function executeRound(
     generateMessageId: () => input.streamMessageId,
     onStepFinish: async (step) => {
       finishReason = step.finishReason ?? finishReason;
+      if (step.usage) {
+        // AI SDK v6 uses inputTokens/outputTokens; map to the friendlier promptTokens/completionTokens
+        const input = step.usage.inputTokens ?? 0;
+        const output = step.usage.outputTokens ?? 0;
+        roundUsage.promptTokens += input;
+        roundUsage.completionTokens += output;
+        roundUsage.totalTokens += input + output;
+      }
     },
   });
 
@@ -256,5 +267,6 @@ export async function executeRound(
     finishReason,
     awaitingUser,
     pendingApprovalIds: approvalIds,
+    usage: roundUsage,
   };
 }

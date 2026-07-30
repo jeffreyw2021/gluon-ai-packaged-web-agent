@@ -1,3 +1,4 @@
+export type { TokenUsage } from "./TokenUsage";
 export type { RunPhase, ChatTurnPhase } from "./RunPhase";
 export { LIVE_RUN_PHASES, isLiveRunPhase } from "./RunPhase";
 export type { RunActivityPhase } from "./RunActivityPhase";

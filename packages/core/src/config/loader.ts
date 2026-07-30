@@ -4,6 +4,7 @@ import type { ToolDefinition, ActionBlockRegistry } from "../tool";
 import { AgentConfigSchema, type AgentConfig } from "./schema";
 import type { GluonDatabaseAdapter } from "../server/db/adapter";
 import { setDbAdapter } from "../server/db/adapterRegistry";
+import type { TokenUsage } from "../types/TokenUsage";
 
 export interface LoadedConfig {
   raw: AgentConfig;
@@ -16,7 +17,7 @@ export interface LoadedConfig {
   };
   hooks: {
     onRunStart?: (ctx: { userId: string; chatId: string; runId: string }) => Promise<void>;
-    onRunEnd?: (ctx: { userId: string; chatId: string; finishReason: string }) => Promise<void>;
+    onRunEnd?: (ctx: { userId: string; chatId: string; finishReason: string; usage: TokenUsage }) => Promise<void>;
     onRunError?: (ctx: { userId: string; error: Error }) => Promise<void>;
   };
 }
@@ -165,9 +166,7 @@ export async function loadConfig(): Promise<LoadedConfig> {
     setDbAdapter(adapterMod as GluonDatabaseAdapter);
   } else {
     // Built-in Prisma adapter — supports postgresql / mysql / sqlite / sqlserver
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getPrismaClient } = require("../server/db/prismaClient") as typeof import("../server/db/prismaClient");
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { createPrismaAdapter } = require("../server/db/prismaAdapter") as typeof import("../server/db/prismaAdapter");
     setDbAdapter(createPrismaAdapter(getPrismaClient()));
   }

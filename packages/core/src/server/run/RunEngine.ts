@@ -14,6 +14,7 @@ import { executeRound, type RoundExecutorInput } from "./RoundExecutor";
 import type { LoadedConfig } from "../../config/loader";
 import { getEnvVar } from "../../config/loader";
 import { getDb } from "../db/adapterRegistry";
+import type { TokenUsage } from "../../types/TokenUsage";
 
 export interface RunEngineInput {
   chatJobRunId: string;
@@ -39,6 +40,7 @@ export async function runEngineRounds(
   let lastFinishReason = "stop";
   let awaitingUser = false;
   let errorMessage: string | null = null;
+  const runTotalUsage: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
 
   const jobRow = await chatJobRunRepository.findById(input.chatJobRunId);
   const startRound = jobRow?.currentRoundIndex ?? 0;
@@ -90,6 +92,9 @@ export async function runEngineRounds(
 
       const result = await executeRound(roundInput);
       lastFinishReason = result.finishReason;
+      runTotalUsage.promptTokens += result.usage.promptTokens;
+      runTotalUsage.completionTokens += result.usage.completionTokens;
+      runTotalUsage.totalTokens += result.usage.totalTokens;
 
       if (result.awaitingUser) {
         awaitingUser = true;
@@ -112,6 +117,7 @@ export async function runEngineRounds(
       awaitingUser,
       errorMessage,
       loadedConfig: input.loadedConfig,
+      usage: runTotalUsage,
     });
   }
 
@@ -127,6 +133,7 @@ async function finalizeRun(args: {
   awaitingUser: boolean;
   errorMessage?: string | null;
   loadedConfig: LoadedConfig;
+  usage: TokenUsage;
 }): Promise<void> {
   const row = await chatJobRunRepository.findById(args.chatJobRunId);
   if (!row) return;
@@ -182,6 +189,7 @@ async function finalizeRun(args: {
           userId: args.userId,
           chatId: args.chatId,
           finishReason: args.finishReason,
+          usage: args.usage,
         }).catch((err) => console.error("[RunEngine] onRunEnd hook failed", err));
       }
     }
@@ -215,6 +223,7 @@ async function finalizeRun(args: {
         chatId: args.chatId,
         runId: args.chatJobRunId,
         seq,
+        usage: args.usage,
       });
     }
   } catch (err) {

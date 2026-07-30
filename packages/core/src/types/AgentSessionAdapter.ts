@@ -2,6 +2,7 @@ import type { UIMessage } from "ai";
 import type { RunActivityPhase } from "./RunActivityPhase";
 import type { RunPhase } from "./RunPhase";
 import type { ReasoningMode } from "./ReasoningMode";
+import type { TokenUsage } from "./TokenUsage";
 
 export type { ReasoningMode };
 
@@ -39,6 +40,9 @@ export interface AgentSessionAdapter {
   isStreaming: boolean;
   isGenerating: boolean;
   isSubmitting: boolean;
+
+  /** Token counts for the most recently completed run. Null before any run completes or while a run is in progress. */
+  lastRunUsage: TokenUsage | null;
 
   /** Current reasoning mode ("auto" | "thinking" | "simple"). */
   reasoningMode: ReasoningMode;

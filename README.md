@@ -285,6 +285,57 @@ import MyToolBlock from "./agent/blocks/MyToolBlock";
 
 ---
 
+### 7. Track token consumption
+
+Every completed run reports how many tokens were consumed. There are two places to read this, depending on where you need it.
+
+**Server-side — `onRunEnd` hook**
+
+Export `onRunEnd` from `agent/hooks.ts` (create the file if it doesn't exist and register it in `agent.config.json` under `"hooks": "./agent/hooks.ts"`). The context now includes a `usage` object:
+
+```typescript
+// agent/hooks.ts
+import type { TokenUsage } from "gluon-ai";
+
+export async function onRunEnd(ctx: {
+  userId: string;
+  chatId: string;
+  finishReason: string;
+  usage: TokenUsage; // { promptTokens, completionTokens, totalTokens }
+}): Promise<void> {
+  console.log(
+    `[${ctx.userId}] run finished — ${ctx.usage.totalTokens} tokens ` +
+    `(${ctx.usage.promptTokens} in / ${ctx.usage.completionTokens} out)`
+  );
+  // persist to your own DB, charge the user, send to an analytics endpoint, etc.
+}
+```
+
+Tokens are accumulated across all tool-call rounds in the run, so `totalTokens` reflects the full conversation turn.
+
+**Client-side — `adapter.lastRunUsage`**
+
+The `AgentSessionAdapter` exposes `lastRunUsage: TokenUsage | null`. It is set when a run completes and reset to `null` when the next run starts:
+
+```tsx
+"use client";
+import { useAgentContext } from "gluon-ai/react";
+
+export function TokenCounter() {
+  const { adapter } = useAgentContext();
+  const usage = adapter.lastRunUsage;
+
+  if (!usage) return null;
+  return (
+    <p>
+      Last run: {usage.totalTokens} tokens ({usage.promptTokens} in / {usage.completionTokens} out)
+    </p>
+  );
+}
+```
+
+---
+
 ## Currently Working On
 
 - **Framework portability**: refactoring internals to better isolate Next.js-specific concerns, laying groundwork for supporting other framework-based web apps

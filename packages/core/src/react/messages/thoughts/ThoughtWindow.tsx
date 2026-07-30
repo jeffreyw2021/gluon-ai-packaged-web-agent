@@ -69,6 +69,12 @@ const ACTIVITY_LABELS: Partial<Record<RunActivityPhase, string>> = {
  * - `data-active="true"` while an activity is in progress.
  * - `data-expanded="true"` when reasoning body is shown.
  * - Renders `null` when there is no activity, no tool invocations, and no reasoning text.
+ *
+ * Placeholder guarantee:
+ * - `AssistantMessage` and `MessageList` always pass `activity="queued"` when the run
+ *   is live but no specific phase event has arrived yet. Custom `ThoughtWindow` overrides
+ *   therefore receive a non-null `activity` immediately after the user submits — no
+ *   consumer-side state checks or wrappers are needed to show an instant placeholder.
  */
 export function ThoughtWindow({
   activity,

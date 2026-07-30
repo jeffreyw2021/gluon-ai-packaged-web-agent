@@ -1,6 +1,6 @@
 {
   "name": "gluon-ai",
-  "version": "0.1.0-beta.37",
+  "version": "0.1.0-beta.40",
   "description": "Drop-in AI chat agent for Next.js — streaming, multi-chat, tool use, configuration-first",
   "license": "MIT",
   "main": "./dist/index.js",

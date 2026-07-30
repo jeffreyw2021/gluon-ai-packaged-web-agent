@@ -292,6 +292,7 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
     runPhase: outboundPending && runState.phase === "idle" ? "queued" : runState.phase,
     runActivity: outboundPending && runState.phase === "idle" ? "queued" : runState.activity,
     awaitingApprovalId: runState.awaitingApprovalId,
+    lastRunUsage: runState.lastRunUsage,
     isChatLoading,
     isActiveChatLatched: outboundPending,
     isLocallyAborted: locallyAborted,

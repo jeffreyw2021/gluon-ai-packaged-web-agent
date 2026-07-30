@@ -1,6 +1,7 @@
 import type { UIMessage } from "ai";
 import type { RunActivityPhase } from "./RunActivityPhase";
 import type { RunPhase } from "./RunPhase";
+import type { TokenUsage } from "./TokenUsage";
 
 export interface RunStartedLiveEvent {
   type: "run.started";
@@ -57,6 +58,7 @@ export interface RunCompletedLiveEvent {
   chatId: string;
   runId: string;
   seq: number;
+  usage?: TokenUsage;
 }
 
 export interface RunFailedLiveEvent {
