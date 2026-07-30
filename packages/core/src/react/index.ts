@@ -1,3 +1,5 @@
+"use client";
+
 // ── Provider & context ────────────────────────────────────────────────────
 export { AgentProvider, useAgentContext } from "./provider/AgentProvider";
 export type { AgentProviderProps, AgentContextValue } from "./provider/AgentProvider";
