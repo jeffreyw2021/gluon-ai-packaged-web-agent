@@ -10,9 +10,6 @@ export type { UseAgentAdapterOptions } from "./adapter/useAgentAdapter";
 export { useChatInput } from "./hooks/useChatInput";
 export type { UseChatInputOptions, UseChatInputReturn } from "./hooks/useChatInput";
 
-export { usePanelMode } from "./hooks/usePanelMode";
-export type { UsePanelModeReturn } from "./hooks/usePanelMode";
-
 export { useReasoningMode } from "./hooks/useReasoningMode";
 export type { ReasoningMode, UseReasoningModeReturn } from "./hooks/useReasoningMode";
 
@@ -39,7 +36,7 @@ export type { UseComposerActionsOptions, UseComposerActionsReturn } from "./hook
 
 // ── Panel orchestrator ────────────────────────────────────────────────────
 export { AgentPanel } from "./panel/AgentPanel";
-export type { AgentPanelProps, AgentPanelMode, AgentPanelClassNames, AgentPanelStyles } from "./panel/AgentPanel";
+export type { AgentPanelProps, AgentPanelClassNames, AgentPanelStyles } from "./panel/AgentPanel";
 
 // ── Chat list ─────────────────────────────────────────────────────────────
 export { ChatList } from "./panel/ChatList";
@@ -77,12 +74,6 @@ export type { SendButtonProps } from "./buttons/SendButton";
 
 export { StopButton } from "./buttons/StopButton";
 export type { StopButtonProps } from "./buttons/StopButton";
-
-export { ExpandButton } from "./buttons/ExpandButton";
-export type { ExpandButtonProps } from "./buttons/ExpandButton";
-
-export { CollapseButton } from "./buttons/CollapseButton";
-export type { CollapseButtonProps } from "./buttons/CollapseButton";
 
 export { AttachButton } from "./buttons/AttachButton";
 export type { AttachButtonProps } from "./buttons/AttachButton";

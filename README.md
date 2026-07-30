@@ -143,7 +143,7 @@ export default function Page() {
 }
 ```
 
-`AgentPanel` supports three display modes: `minimal` (floating dock), `fullscreen`, and `sideBySide` , switchable at runtime.
+Drop `<AgentPanel />` anywhere inside `<AgentProvider>` and style it however you want — it renders structural slots (`data-slot` attributes) with no built-in CSS, so layout is entirely up to you.
 
 ---
 

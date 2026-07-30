@@ -14,8 +14,6 @@ import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-quer
 import type { AgentSessionAdapter } from "../../types/AgentSessionAdapter";
 import { useAgentAdapter } from "../adapter/useAgentAdapter";
 import type { ActionBlockRegistry, ToolUI } from "../../tool";
-import type { AgentPanelMode } from "../panel/AgentPanel";
-import { panelModeAtom } from "./atoms";
 
 // ── Context ────────────────────────────────────────────────────────────────
 
@@ -60,8 +58,6 @@ export interface AgentProviderProps {
    * `GET {basePath}/config` — sourced from `agent.config.json`.
    */
   suggestedPrompts?: string[];
-  /** Initial panel display mode. Default "fullscreen". */
-  defaultPanelMode?: AgentPanelMode;
 }
 
 interface ConfigResponse {
@@ -74,7 +70,7 @@ function AgentProviderInner({
   basePath = "/api/gluon-ai",
   actionBlocks = {},
   suggestedPrompts: promptsProp,
-}: Omit<AgentProviderProps, "queryClient" | "defaultPanelMode">) {
+}: Omit<AgentProviderProps, "queryClient">) {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [, bump] = useReducer((n: number) => n + 1, 0);
   const bumpSession = useCallback(() => bump(), []);
@@ -97,9 +93,7 @@ function AgentProviderInner({
     staleTime: Infinity,
   });
 
-  const suggestedPrompts =
-    promptsProp ?? configData?.suggestedPrompts ?? [];
-
+  const suggestedPrompts = promptsProp ?? configData?.suggestedPrompts ?? [];
   const toolUi: Record<string, ToolUI> = configData?.toolUi ?? {};
 
   return (
@@ -115,16 +109,10 @@ export function AgentProvider({
   basePath,
   actionBlocks,
   suggestedPrompts,
-  defaultPanelMode = "fullscreen",
 }: AgentProviderProps) {
   const qc = queryClient ?? defaultQueryClient;
-  // Create a stable per-provider Jotai store initialized with the desired panel mode.
-  // Empty dep array is intentional — the default is read once at mount.
-  const store = useMemo(() => {
-    const s = createStore();
-    s.set(panelModeAtom, defaultPanelMode);
-    return s;
-  }, []);
+  // Stable Jotai store — shared by useReasoningMode and other atoms.
+  const store = useMemo(() => createStore(), []);
   return (
     <JotaiProvider store={store}>
       <QueryClientProvider client={qc}>

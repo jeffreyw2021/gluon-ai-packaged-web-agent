@@ -9,8 +9,6 @@ import type { UseAttachmentsReturn } from "../hooks/useAttachments";
 import type { MessageListComponentSlots } from "../messages/MessageList";
 import type { ChatInputClassNames, ChatInputStyles } from "../input/ChatInput";
 
-export type AgentPanelMode = "minimal" | "fullscreen" | "sideBySide";
-
 export interface AgentPanelClassNames {
   root?: string;
   sidebar?: string;
@@ -30,15 +28,11 @@ export interface AgentPanelStyles {
 }
 
 export interface AgentPanelProps {
-  mode?: AgentPanelMode;
-  /** Called when the user should trigger expand (e.g. click on minimal dock). */
-  onRequestExpand?: () => void;
-  onRequestCollapse?: () => void;
-  /** Show/hide the sidebar slot (default true in fullscreen/sideBySide). */
+  /** Show/hide the sidebar slot (default true). */
   showSidebar?: boolean;
-  /** Render a custom sidebar instead of nothing. */
+  /** Render a custom sidebar. */
   renderSidebar?: () => React.ReactNode;
-  /** Render a custom header instead of the default title row. */
+  /** Render a custom header. */
   renderHeader?: () => React.ReactNode;
   /** Override message list sub-components. */
   messageComponents?: MessageListComponentSlots;
@@ -47,8 +41,7 @@ export interface AgentPanelProps {
   /**
    * Pass the return value of `useAttachments()` to support file attachments.
    * When provided, the attachment payload is included in the sent message and
-   * files are cleared after each send. `hasAttachments` is also forwarded to
-   * `ChatInput` so the send button is enabled when files are attached.
+   * files are cleared after each send.
    *
    * @example
    * ```tsx
@@ -65,17 +58,11 @@ export interface AgentPanelProps {
 
 /**
  * Headless AgentPanel orchestrator. Renders the structural skeleton
- * (`data-slot` attributes) based on `mode` — zero built-in styles.
+ * (`data-slot` attributes) — zero built-in styles.
  *
  * Slots: `data-slot="agent-panel"`, `"sidebar"`, `"main"`, `"header"`, `"body"`, `"input"`
- *
- * In `minimal` mode the panel renders a compact dock with only the input.
- * In `fullscreen` / `sideBySide` it renders sidebar + main column.
  */
 export function AgentPanel({
-  mode = "fullscreen",
-  onRequestExpand,
-  onRequestCollapse,
   showSidebar = true,
   renderSidebar,
   renderHeader,
@@ -121,43 +108,9 @@ export function AgentPanel({
     [composer, sendUserMessage],
   );
 
-  if (mode === "minimal") {
-    return (
-      <div
-        data-slot="agent-panel"
-        data-mode="minimal"
-        className={className ?? classNames.root}
-        style={style ?? styles.root}
-        onClick={onRequestExpand}
-        role={onRequestExpand ? "button" : undefined}
-        tabIndex={onRequestExpand ? 0 : undefined}
-        aria-label={onRequestExpand ? "Expand chat" : undefined}
-      >
-        <div
-          onClick={(e) => e.stopPropagation()}
-          data-slot="input"
-          className={classNames.input?.root}
-          style={styles.input?.root}
-        >
-          <ChatInput
-            value={composer.inputText}
-            onChange={composer.setInputText}
-            onSend={handleSend}
-            onStop={() => void stopGeneration()}
-            runPhase={runPhase}
-            hasAttachments={hasAttachments}
-            classNames={classNames.input}
-            styles={styles.input}
-          />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       data-slot="agent-panel"
-      data-mode={mode}
       className={className ?? classNames.root}
       style={style ?? styles.root}
     >
@@ -169,20 +122,7 @@ export function AgentPanel({
 
       <div data-slot="main" className={classNames.main} style={styles.main}>
         <div data-slot="header" className={classNames.header} style={styles.header}>
-          {renderHeader ? (
-            renderHeader()
-          ) : (
-            <>
-              <span data-slot="title" />
-              {onRequestCollapse && (
-                <button
-                  type="button"
-                  aria-label="Collapse"
-                  onClick={onRequestCollapse}
-                />
-              )}
-            </>
-          )}
+          {renderHeader ? renderHeader() : <span data-slot="title" />}
         </div>
 
         <div data-slot="body" className={classNames.body} style={styles.body}>
