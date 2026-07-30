@@ -54,8 +54,6 @@ interface ScanResult {
   packageManager: "pnpm" | "yarn" | "bun" | "npm";
   /** Whether agent.config.json already exists */
   alreadyInitialized: boolean;
-  /** Env file to add new vars to */
-  envExamplePath: string;
 }
 
 function scanProject(root: string): ScanResult {
@@ -118,8 +116,6 @@ function scanProject(root: string): ScanResult {
   if (exists(path.join(root, "yarn.lock"))) packageManager = "yarn";
   if (exists(path.join(root, "bun.lockb"))) packageManager = "bun";
 
-  const envExamplePath = path.join(root, ".env.example");
-
   return {
     root,
     appRouterDir,
@@ -128,7 +124,6 @@ function scanProject(root: string): ScanResult {
     authLibs,
     packageManager,
     alreadyInitialized: exists(path.join(root, "agent.config.json")),
-    envExamplePath,
   };
 }
 
@@ -489,57 +484,6 @@ CREATE INDEX IF NOT EXISTS "gluon_chat_job_run_chatId_status_idx"
     );
   } else {
     log("info", "Agent tables (gluon_chat, gluon_chat_job_run) created/verified.");
-  }
-}
-
-// ── .env.example update ────────────────────────────────────────────────────
-
-function applyEnvExample(scan: ScanResult, answers: Answers) {
-  const vars = [
-    {
-      key: answers.openaiKeyVar,
-      placeholder: "sk-...",
-      comment: "OpenAI API key",
-    },
-    {
-      key: answers.databaseUrlVar,
-      placeholder: "postgresql://user:pass@localhost:5432/mydb",
-      comment: "PostgreSQL connection string",
-    },
-    {
-      key: answers.redisUrlVar,
-      placeholder: "redis://localhost:6379",
-      comment: "Redis connection string (BullMQ + pub/sub)",
-    },
-  ];
-
-  const p = scan.envExamplePath;
-  let existing = exists(p) ? read(p) : "";
-
-  let additions = "";
-  for (const { key, placeholder, comment } of vars) {
-    if (!existing.includes(`${key}=`) && !existing.includes(`${key} =`)) {
-      additions += `\n# ${comment}\n${key}=${placeholder}\n`;
-    }
-  }
-
-  if (!additions) {
-    log("skip", `.env.example (all vars already present)`);
-    return;
-  }
-
-  if (!existing) {
-    write(p, `# gluon-ai env vars\n${additions}`, {
-      overwrite: true,
-    });
-  } else {
-    if (!existing.endsWith("\n")) existing += "\n";
-    fs.writeFileSync(
-      p,
-      existing + `\n# gluon-ai env vars\n` + additions,
-      "utf-8",
-    );
-    log("append", ".env.example");
   }
 }
 
@@ -907,10 +851,7 @@ export async function initCommand(
     log("info", "Skipping Prisma setup (custom adapter mode).");
   }
 
-  // 2. .env.example
-  applyEnvExample(scan, answers);
-
-  // 3. agent.config.json  (auth.getUserId uses a built-in strategy string — no file needed)
+  // 2. agent.config.json  (auth.getUserId uses a built-in strategy string — no file needed)
   write(path.join(root, "agent.config.json"), configTemplate(answers));
 
   // 4. Web search tool (default example — DuckDuckGo Lite, no API key required)
