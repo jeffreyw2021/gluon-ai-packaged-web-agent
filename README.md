@@ -56,7 +56,6 @@ This will ask you a few questions (env var names, model, API path, DB provider) 
 | `agent/tools/webSearch.ts`                | Example tool (web search via OpenAI)                 |
 | `[app]/api/gluon-ai/[[...path]]/route.ts` | Single catch-all API route                           |
 | `instrumentation.ts`                      | Starts the BullMQ worker via Next.js instrumentation |
-| `.env.example` entries                    | Placeholders for your secrets                        |
 
 It also patches `next.config` (`serverExternalPackages`) and adds a `gluon:uninstall` script to your `package.json`.
 
