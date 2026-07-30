@@ -34,7 +34,7 @@ pnpm add gluon-ai@beta
 
 ## Init
 
-Before running init, add your secrets to `.env` (or `.env.local`). The wizard will auto-detect existing env var names and use them as defaults. The names below are the package defaults — you can use any names you want and set them during the init prompts:
+Before running init, add your secrets to `.env` (or `.env.local`). The wizard will auto-detect existing env var names and use them as defaults. The names below are the package defaults; you can use any names you want and set them during the init prompts:
 
 ```env
 OPENAI_API_KEY=sk-...
@@ -60,7 +60,7 @@ This will ask you a few questions (env var names, model, API path, DB provider) 
 
 It also patches `next.config` (`serverExternalPackages`) and adds a `gluon:uninstall` script to your `package.json`.
 
-The agent database tables (`gluon_chat`, `gluon_chat_job_run`) are created automatically during init using idempotent SQL — your existing schema and tables are never touched. This is why your DB env var needs to be set before running init.
+The agent database tables (`gluon_chat`, `gluon_chat_job_run`) are created automatically during init using idempotent SQL. Your existing schema and tables are never touched. This is why your DB env var needs to be set before running init.
 
 > **Skip the prompts:** `npx gluon-ai init --default` accepts all defaults instantly.
 
@@ -84,7 +84,7 @@ instrumentation.ts     # re-exports the gluon worker registration; Next.js runs 
 
 **`agent/tools/`** is where you define what the agent can do. Each tool is a TypeScript file that exports a `defineTool()` call with a description, input schema, and execute function. Scaffold new ones with `npx gluon-ai add-tool <name>`.
 
-**`agent/skills/`** is for knowledge documents — Markdown files the agent can pull in on demand to handle specific tasks or domains. Scaffold new ones with `npx gluon-ai add-skill <name>`.
+**`agent/skills/`** is for knowledge documents: Markdown files the agent can pull in on demand to handle specific tasks or domains. Scaffold new ones with `npx gluon-ai add-skill <name>`.
 
 **`agent/blocks/`** is for custom UI. When a tool runs, you can render a React component inline in the chat stream instead of plain text output. Drop your components here and register them in `agent.config.json`.
 
