@@ -10,7 +10,7 @@ Built for myself. Shared in case it's useful to you.
 
 ## Compatibility
 
-**Next.js only** because that's my main stack and first-class support matters more than broad compatibility right now. The package requires:
+**Next.js only** for now, because that's my main stack and first-class support matters more than broad compatibility right now. The package requires:
 
 - Next.js 15+
 - React 19+
