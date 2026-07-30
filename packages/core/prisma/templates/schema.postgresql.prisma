@@ -1,0 +1,51 @@
+// gluon-ai — package-owned schema (PostgreSQL).
+// Generated into ./generated/ by `postinstall` or `npx gluon-ai init`.
+
+generator client {
+  provider      = "prisma-client-js"
+  output        = "./generated"
+  binaryTargets = ["native", "linux-arm64-openssl-3.0.x", "rhel-openssl-1.0.x", "debian-openssl-1.1.x", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("AGENT_DATABASE_URL")
+}
+
+model GluonChat {
+  id             String             @id @default(cuid())
+  userId         String
+  title          String             @default("New Chat")
+  uiMessages     Json               @default("[]")
+  activeJobRunId String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  jobRuns        GluonChatJobRun[]
+
+  @@index([userId])
+  @@map("gluon_chat")
+}
+
+model GluonChatJobRun {
+  id                            String    @id @default(cuid())
+  chatId                        String
+  chat                          GluonChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  userId                        String
+  status                        String    @default("QUEUED")
+  bullmqJobId                   String?   @unique
+  currentRoundIndex             Int       @default(0)
+  pendingConfirmationToolCallId String?
+  confirmationResolvedIds       Json      @default("[]")
+  lastPublishedSeq              Int       @default(0)
+  errorMessage                  String?
+  startedAt                     DateTime?
+  finishedAt                    DateTime?
+  createdAt                     DateTime  @default(now())
+  updatedAt                     DateTime  @updatedAt
+
+  @@index([chatId, createdAt])
+  @@index([userId, createdAt])
+  @@index([status, updatedAt])
+  @@index([chatId, status])
+  @@map("gluon_chat_job_run")
+}

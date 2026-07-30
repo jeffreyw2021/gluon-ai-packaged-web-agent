@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/yourusername/gluon-ai/blob/main/packages/core/agent.config.schema.json",
+  "title": "AgentConfig",
+  "description": "Configuration file for gluon-ai (agent.config.json)",
+  "type": "object",
+  "required": ["auth"],
+  "properties": {
+    "model": {
+      "type": "string",
+      "default": "gpt-4o",
+      "description": "OpenAI model ID to use for the agent."
+    },
+    "systemPrompt": {
+      "type": "string",
+      "default": "You are a helpful assistant.",
+      "description": "System prompt string OR a relative path to a .md/.txt file."
+    },
+    "maxOutputTokens": {
+      "type": "integer",
+      "default": 32768,
+      "description": "Maximum tokens the model can generate per round."
+    },
+    "maxRounds": {
+      "type": "integer",
+      "default": 25,
+      "description": "Maximum tool-call rounds per run before the agent is force-stopped."
+    },
+    "tools": {
+      "type": "object",
+      "description": "Map of tool name → relative path to a .ts file that exports `defineTool(...)` as default.",
+      "additionalProperties": { "type": "string" },
+      "default": {}
+    },
+    "actionBlocks": {
+      "type": "object",
+      "description": "Map of tool name → relative path to a React component (.tsx) for in-stream UI cards.",
+      "additionalProperties": { "type": "string" },
+      "default": {}
+    },
+    "skills": {
+      "type": "array",
+      "description": "Array of relative paths to Markdown skill documents the agent can read via read_skill.",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "auth": {
+      "type": "object",
+      "required": ["getUserId"],
+      "properties": {
+        "getUserId": {
+          "type": "string",
+          "description": "Relative path to a .ts file that exports a default async function (req: Request) => Promise<string | null>."
+        }
+      }
+    },
+    "hooks": {
+      "type": "string",
+      "description": "Relative path to a .ts file that exports optional { onRunStart, onRunEnd, onRunError } hooks."
+    },
+    "sendReasoning": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to stream reasoning tokens (chain-of-thought) to the client."
+    },
+    "suggestedPrompts": {
+      "type": "array",
+      "description": "Suggested prompts shown in the empty-state UI.",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "worker": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to enable the BullMQ background worker."
+    },
+    "workerConcurrency": {
+      "type": "integer",
+      "default": 5,
+      "description": "Number of concurrent jobs the worker processes."
+    },
+    "env": {
+      "type": "object",
+      "description": "Remap environment variable names if they differ from the defaults.",
+      "properties": {
+        "openaiApiKey": {
+          "type": "string",
+          "default": "OPENAI_API_KEY",
+          "description": "Name of the env var holding the OpenAI API key."
+        },
+        "databaseUrl": {
+          "type": "string",
+          "default": "DATABASE_URL",
+          "description": "Name of the env var holding the PostgreSQL connection string."
+        },
+        "redisUrl": {
+          "type": "string",
+          "default": "REDIS_URL",
+          "description": "Name of the env var holding the Redis connection string."
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

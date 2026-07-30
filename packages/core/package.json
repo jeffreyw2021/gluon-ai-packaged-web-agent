@@ -1,0 +1,96 @@
+{
+  "name": "gluon-ai",
+  "version": "0.1.0-beta.36",
+  "description": "Drop-in AI chat agent for Next.js — streaming, multi-chat, tool use, configuration-first",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./react": {
+      "import": "./dist/react.mjs",
+      "require": "./dist/react.js",
+      "types": "./dist/react.d.ts"
+    },
+    "./routes": {
+      "import": "./dist/routes.js",
+      "require": "./dist/routes.js",
+      "default": "./dist/routes.js",
+      "types": "./dist/routes.d.ts"
+    },
+    "./tool": {
+      "import": "./dist/tool.mjs",
+      "require": "./dist/tool.js",
+      "types": "./dist/tool.d.ts"
+    },
+    "./server": {
+      "import": "./dist/server.js",
+      "require": "./dist/server.js",
+      "default": "./dist/server.js",
+      "types": "./dist/server.d.ts"
+    },
+    "./instrumentation": {
+      "import": "./dist/instrumentation.mjs",
+      "require": "./dist/instrumentation.js",
+      "types": "./dist/instrumentation.d.ts"
+    },
+    "./cli": {
+      "require": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "prisma/schema.prisma",
+    "prisma/templates",
+    "cli",
+    "scripts",
+    "agent.config.schema.json"
+  ],
+  "bin": {
+    "gluon-ai": "./cli/bin.js"
+  },
+  "scripts": {
+    "prisma:generate": "prisma generate --schema ./prisma/schema.prisma",
+    "build": "npm run prisma:generate && tsup",
+    "dev": "npm run prisma:generate && tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "node_modules/.bin/eslint src",
+    "postinstall": "node scripts/postinstall.js",
+    "preuninstall": "node scripts/preuninstall.js"
+  },
+  "peerDependencies": {
+    "next": ">=15",
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.89",
+    "@prisma/client": "^6.8.2",
+    "@tanstack/react-query": "^5.76.2",
+    "ai": "^6.0.237",
+    "bullmq": "^5.34.8",
+    "ioredis": "^5.6.0",
+    "jotai": "^2.12.5",
+    "mammoth": "^1.12.0",
+    "pdfjs-dist": "^6.2.108",
+    "redis": "^5.0.0",
+    "server-only": "^0.0.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@typescript-eslint/eslint-plugin": "^8.65.0",
+    "@typescript-eslint/parser": "^8.65.0",
+    "eslint": "^10.8.0",
+    "prisma": "^6.8.2",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.3"
+  }
+}
