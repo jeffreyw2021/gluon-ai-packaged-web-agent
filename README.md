@@ -13,13 +13,13 @@ Built for myself. Shared in case it's useful.
 **Next.js only** for now.
 
 
-| Requirement | Notes                                                                                                                                  |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Next.js 15+ | App Router                                                                                                                             |
-| React 19+   |                                                                                                                                        |
-| PostgreSQL  | Best supported. MySQL / SQLite available via init; less battle-tested                                                                  |
-| Redis       | Required for the BullMQ worker + live events                                                                                           |
-| AI provider | OpenAI included; Anthropic, Google, Mistral, Groq, xAI, DeepSeek, or Vercel AI Gateway — see [AI model providers](#ai-model-providers) |
+| Requirement | Notes                                                                                                                         |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Next.js 15+ | App Router                                                                                                                    |
+| React 19+   |                                                                                                                               |
+| PostgreSQL  | Best supported. MySQL / SQLite available via init; less battle-tested                                                         |
+| Redis       | Required for the BullMQ worker + live events                                                                                  |
+| AI provider | OpenAI, Anthropic, Google, Mistral, Groq, xAI, DeepSeek, or Vercel AI Gateway — see [AI model providers](#ai-model-providers) |
 
 
 ---
