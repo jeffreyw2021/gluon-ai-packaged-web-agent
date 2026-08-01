@@ -1,14 +1,21 @@
 
-import { ToolLoopAgent, stepCountIs, tool } from "ai";
+import { ToolLoopAgent, extractReasoningMiddleware, stepCountIs, tool, wrapLanguageModel } from "ai";
 import type { LanguageModel, ToolSet } from "ai";
 import { z } from "zod";
 import type { LoadedConfig } from "../../config/loader";
-import { getLanguageModel, modelProvider, normalizeModelId } from "../model/resolveModel";
+import { getLanguageModel, normalizeModelId } from "../model/resolveModel";
 import { requestConfirmation } from "./tools/requestConfirmation";
 import { createReadSkillTool } from "./tools/readSkill";
 import { createDiscoverToolsTool } from "./tools/discoverTools";
 
-function buildSystemPrompt(config: LoadedConfig, contextParts: string[]): string {
+const THINKING_INSTRUCTION = `\n\n## Think mode
+Think carefully before responding. First write out your reasoning inside <thinking>...</thinking> tags — work through the problem step by step, consider edge cases, and only then write your final answer outside the tags. Your thinking is visible to the user.`;
+
+function buildSystemPrompt(
+  config: LoadedConfig,
+  contextParts: string[],
+  sendReasoning: boolean,
+): string {
   let prompt = config.systemPrompt;
 
   if (contextParts.length > 0) {
@@ -32,6 +39,10 @@ function buildSystemPrompt(config: LoadedConfig, contextParts: string[]): string
         .join("\n");
   }
 
+  if (sendReasoning) {
+    prompt += THINKING_INSTRUCTION;
+  }
+
   return prompt;
 }
 
@@ -40,26 +51,7 @@ export interface CreateAgentOptions {
   sendReasoning?: boolean;
 }
 
-/**
- * Build provider options for the given model.
- * For OpenAI reasoning models (o-series), set parallelToolCalls: false
- * and optionally a reasoning effort level.
- */
-function buildProviderOptions(normalizedModelId: string, sendReasoning: boolean): Record<string, Record<string, string | number | boolean | null>> | undefined {
-  const provider = modelProvider(normalizedModelId);
-  if (provider === "openai") {
-    const base: Record<string, string | number | boolean | null> = { parallelToolCalls: false };
-    if (sendReasoning) {
-      base.reasoningEffort = "medium";
-    }
-    return { openai: base };
-  }
-  return undefined;
-}
-
 export async function createAgent(config: LoadedConfig, opts: CreateAgentOptions = {}) {
-  // Call context providers fresh on every request so dynamic values (e.g.
-  // current date/time) are always up to date.
   const contextParts: string[] = [];
   for (const provider of config.contextProviders ?? []) {
     try {
@@ -93,25 +85,33 @@ export async function createAgent(config: LoadedConfig, opts: CreateAgentOptions
     });
   }
 
-  // When sendReasoning is requested, prefer the dedicated reasoningModel (if
-  // configured). Fall back to the main model so callers never get undefined.
   const sendReasoning = opts.sendReasoning ?? false;
+
+  // When Think mode is active, prefer the dedicated reasoningModel if configured.
   const rawModelId =
     sendReasoning && config.raw.reasoningModel
       ? config.raw.reasoningModel
       : config.raw.model;
 
   const normalizedId = normalizeModelId(rawModelId);
-  const model: LanguageModel = getLanguageModel(normalizedId);
-  const providerOptions = buildProviderOptions(normalizedId, sendReasoning);
+  let model: LanguageModel = getLanguageModel(normalizedId);
+
+  // Wrap with extractReasoningMiddleware so <thinking>…</thinking> blocks
+  // in the model output are converted to proper reasoning-* stream events,
+  // which the ThoughtWindow then displays. This works with any gateway model.
+  if (sendReasoning) {
+    model = wrapLanguageModel({
+      model,
+      middleware: extractReasoningMiddleware({ tagName: "thinking" }),
+    });
+  }
 
   return new ToolLoopAgent({
     model,
-    instructions: buildSystemPrompt(config, contextParts),
+    instructions: buildSystemPrompt(config, contextParts, sendReasoning),
     allowSystemInMessages: true,
     tools,
     maxOutputTokens: config.raw.maxOutputTokens,
     stopWhen: stepCountIs(config.raw.maxRounds),
-    ...(providerOptions ? { providerOptions } : {}),
   });
 }
