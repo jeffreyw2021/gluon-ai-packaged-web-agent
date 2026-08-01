@@ -79,6 +79,8 @@ export function startAgentWorker(): Worker<RunAiChatJobInput> {
     async (job) => {
       await runMigration();
       const d = job.data;
+      const shortRun = d.chatJobRunId.slice(-8);
+      console.log(`[gluon] job start  run=${shortRun} chat=${d.chatId.slice(-8)}`);
       const cfg = await loadConfig();
       if (!d.continueAfterApproval) {
         await chatJobRunRepository.transitionStatus(d.chatJobRunId, "RUNNING");
@@ -88,15 +90,22 @@ export function startAgentWorker(): Worker<RunAiChatJobInput> {
           .onRunStart({ userId: d.userId, chatId: d.chatId, runId: d.chatJobRunId })
           .catch((e: unknown) => console.error("[agent-worker] onRunStart", e));
       }
-      return runEngineRounds({
-        chatJobRunId: d.chatJobRunId,
-        chatId: d.chatId,
-        userId: d.userId,
-        initialUserMessage: d.initialUserMessage,
-        enqueuePersistedMessageCount: d.enqueuePersistedMessageCount,
-        sendReasoning: d.sendReasoning,
-        loadedConfig: cfg,
-      });
+      try {
+        const result = await runEngineRounds({
+          chatJobRunId: d.chatJobRunId,
+          chatId: d.chatId,
+          userId: d.userId,
+          initialUserMessage: d.initialUserMessage,
+          enqueuePersistedMessageCount: d.enqueuePersistedMessageCount,
+          sendReasoning: d.sendReasoning,
+          loadedConfig: cfg,
+        });
+        console.log(`[gluon] job done   run=${shortRun} finish=${result.finishReason}${result.errorMessage ? " err=" + result.errorMessage : ""}`);
+        return result;
+      } catch (e) {
+        console.error(`[gluon] job error  run=${shortRun}`, e);
+        throw e;
+      }
     },
     { connection: getRedisConnection(), concurrency: n },
   );

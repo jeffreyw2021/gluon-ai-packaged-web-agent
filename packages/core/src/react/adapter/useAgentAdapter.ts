@@ -104,6 +104,9 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
 
         // run events: apply to current messages in cache
         if (!("chatId" in ev) || ev.chatId !== activeChatId) return;
+        if (process.env.NODE_ENV === "development") {
+          console.debug("[gluon:sse]", ev.type, "runId" in ev ? (ev as { runId: string }).runId?.slice(-6) : "");
+        }
 
         queryClient.setQueryData<{ messages: UIMessage[]; runId: string | null }>(
           threadKey ?? ["__agent_no_chat__"],
@@ -291,11 +294,17 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
   const isStreaming = runState.activity === "streaming" || runState.activity === "reasoning";
   const isSubmitting = outboundPending;
 
+  // Show optimistic "queued" state whenever we're pending and no live run is active.
+  // The original `runState.phase === "idle"` check was too narrow: after the first run
+  // completes, phase is "completed" (not "idle"), so the second message's outboundPending
+  // would produce phase="completed" and activity=null — hiding the ThoughtWindow entirely.
+  const showPendingAsQueued = outboundPending && !isLiveRunPhase(runState.phase);
+
   return {
     activeChatId,
     messages,
-    runPhase: outboundPending && runState.phase === "idle" ? "queued" : runState.phase,
-    runActivity: outboundPending && runState.phase === "idle" ? "queued" : runState.activity,
+    runPhase: showPendingAsQueued ? "queued" : runState.phase,
+    runActivity: showPendingAsQueued ? "queued" : runState.activity,
     awaitingApprovalId: runState.awaitingApprovalId,
     lastRunUsage: runState.lastRunUsage,
     isChatLoading,
