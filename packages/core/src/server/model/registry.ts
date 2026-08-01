@@ -1,11 +1,11 @@
 import { createProviderRegistry, createGateway, type LanguageModel } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
 import type { AgentConfig } from "../../config/schema";
 
 type EnvConfig = NonNullable<AgentConfig["env"]>;
 
 // [id, npm-package, env-config-key, default-env-var, factory-function-name]
 const OPTIONAL_PROVIDERS = [
+  ["openai", "@ai-sdk/openai", "openaiApiKey", "OPENAI_API_KEY", "createOpenAI"],
   ["anthropic", "@ai-sdk/anthropic", "anthropicApiKey", "ANTHROPIC_API_KEY", "createAnthropic"],
   ["google", "@ai-sdk/google", "googleApiKey", "GOOGLE_GENERATIVE_AI_API_KEY", "createGoogleGenerativeAI"],
   ["mistral", "@ai-sdk/mistral", "mistralApiKey", "MISTRAL_API_KEY", "createMistral"],
@@ -36,13 +36,7 @@ export function buildProviderRegistry(envConfig?: EnvConfig): ReturnType<typeof 
 
   const providers: Record<string, unknown> = {};
 
-  // OpenAI — always a hard dependency; skip only if key is absent
-  const openaiKey = resolveEnvValue(envConfig, "openaiApiKey", "OPENAI_API_KEY");
-  if (openaiKey) {
-    providers["openai"] = createOpenAI({ apiKey: openaiKey });
-  }
-
-  // Optional providers — registered only if the package is installed AND the key is set
+  // All providers are registered the same way — try/require the optional package if installed and key is set
   for (const [id, pkg, envKey, defaultVar, factoryName] of OPTIONAL_PROVIDERS) {
     const key = resolveEnvValue(envConfig, envKey, defaultVar);
     if (!key) continue;
@@ -76,10 +70,8 @@ export function buildProviderRegistry(envConfig?: EnvConfig): ReturnType<typeof 
  * `"anthropic/claude-sonnet-4.6"`, `"gateway/openai/gpt-4o"`) to a
  * LanguageModel via the provider registry.
  *
- * Backward-compat: bare model IDs like `"gpt-4o"` are normalized to
- * `"openai/gpt-4o"` automatically.
+ * Model IDs must include a provider prefix (e.g. `"openai/gpt-4o"`).
  */
 export function resolveLanguageModel(modelId: string, envConfig?: EnvConfig): LanguageModel {
-  const id = modelId.includes("/") ? modelId : `openai/${modelId}`;
-  return buildProviderRegistry(envConfig).languageModel(id as `${string}/${string}`);
+  return buildProviderRegistry(envConfig).languageModel(modelId as `${string}/${string}`);
 }

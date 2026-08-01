@@ -43,7 +43,7 @@ AGENT_DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
 REDIS_URL=redis://localhost:6379
 ```
 
-> OpenAI works out of the box. For other providers see [AI model providers](#ai-model-providers).
+> Set at least one provider key before running init. See [AI model providers](#ai-model-providers) for the full list.
 
 ```bash
 npx gluon-ai init          # interactive
@@ -53,17 +53,6 @@ npx gluon-ai init --default   # accept all defaults (-y also works)
 
 ```bash
 npm run dev
-```
-
-Drop in the packaged panel:
-
-```tsx
-"use client";
-import { GluonAgentPanel } from "gluon-ai/react";
-
-export default function Page() {
-  return <GluonAgentPanel darkMode frostedGlass />;
-}
 ```
 
 That's enough for a working agent with web search, multi-chat, streaming, and the background worker.
@@ -80,7 +69,7 @@ That's enough for a working agent with web search, multi-chat, streaming, and th
 | `agent.config.json`         | Model, tools, auth, prompts, env remaps                                |
 | `agent/package.json`        | `{ "type": "module" }` — silences Node ESM warnings when loading tools |
 | `agent/system-prompt.md`    | Default system prompt (edit this freely)                               |
-| `agent/tools/webSearch.ts`  | Example tool (OpenAI web search)                                       |
+| `agent/tools/webSearch.ts`  | Example tool (OpenAI-native web search — requires `OPENAI_API_KEY` + `@ai-sdk/openai`) |
 | `agent/context/datetime.ts` | Example context provider (current date/time)                           |
 | `[app                       | src/app]/api/gluon-ai/[[...path]]/route.ts`                            |
 | `instrumentation.ts`        | Starts the BullMQ worker on Next.js boot                               |
@@ -366,9 +355,22 @@ Full schema: `[packages/core/agent.config.schema.json](packages/core/agent.confi
 
 Set `model` in `agent.config.json` to a `provider/model` string. The prefix selects the provider; everything else is the model ID.
 
-### OpenAI (included — no extra steps)
+For each provider, set its API key **and** install its optional SDK package. Gluon detects both at startup and registers the provider automatically — no code changes needed.
 
-`@ai-sdk/openai` ships with gluon. Set the key and pick a model:
+
+| Provider  | Model prefix | Env var                        | Install                   |
+| --------- | ------------ | ------------------------------ | ------------------------- |
+| OpenAI    | `openai`     | `OPENAI_API_KEY`               | `npm i @ai-sdk/openai`    |
+| Anthropic | `anthropic`  | `ANTHROPIC_API_KEY`            | `npm i @ai-sdk/anthropic` |
+| Google    | `google`     | `GOOGLE_GENERATIVE_AI_API_KEY` | `npm i @ai-sdk/google`    |
+| Mistral   | `mistral`    | `MISTRAL_API_KEY`              | `npm i @ai-sdk/mistral`   |
+| Groq      | `groq`       | `GROQ_API_KEY`                 | `npm i @ai-sdk/groq`      |
+| xAI       | `xai`        | `XAI_API_KEY`                  | `npm i @ai-sdk/xai`       |
+| DeepSeek  | `deepseek`   | `DEEPSEEK_API_KEY`             | `npm i @ai-sdk/deepseek`  |
+
+All provider packages are optional. If a provider's package is missing or its key is not set, that prefix is silently skipped — no error, just unavailable.
+
+Example:
 
 ```env
 OPENAI_API_KEY=sk-...
@@ -378,30 +380,13 @@ OPENAI_API_KEY=sk-...
 { "model": "openai/o4-mini" }
 ```
 
-
-
-### Other providers
-
-For any other provider, set its API key **and** install its optional SDK package. Gluon detects both at startup and registers the provider automatically — no code changes needed.
-
-
-| Provider  | Model prefix | Env var                        | Install                   |
-| --------- | ------------ | ------------------------------ | ------------------------- |
-| Anthropic | `anthropic`  | `ANTHROPIC_API_KEY`            | `npm i @ai-sdk/anthropic` |
-| Google    | `google`     | `GOOGLE_GENERATIVE_AI_API_KEY` | `npm i @ai-sdk/google`    |
-| Mistral   | `mistral`    | `MISTRAL_API_KEY`              | `npm i @ai-sdk/mistral`   |
-| Groq      | `groq`       | `GROQ_API_KEY`                 | `npm i @ai-sdk/groq`      |
-| xAI       | `xai`        | `XAI_API_KEY`                  | `npm i @ai-sdk/xai`       |
-| DeepSeek  | `deepseek`   | `DEEPSEEK_API_KEY`             | `npm i @ai-sdk/deepseek`  |
-
-
-Example after installing and setting the key:
+```env
+ANTHROPIC_API_KEY=sk-ant-...
+```
 
 ```json
 { "model": "anthropic/claude-sonnet-4.6" }
 ```
-
-If a provider's package is missing or its key is not set, that prefix is silently skipped — no error, just unavailable.
 
 ### Via Vercel AI Gateway (optional — skips per-provider packages)
 

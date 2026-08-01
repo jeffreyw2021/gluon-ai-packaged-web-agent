@@ -8,7 +8,7 @@
     "model": {
       "type": "string",
       "default": "openai/o4-mini",
-      "description": "Model to use, as a provider/model string (e.g. \"openai/o4-mini\", \"anthropic/claude-sonnet-4.6\", \"gateway/openai/gpt-4o\"). Bare model IDs like \"gpt-4o\" are normalized to \"openai/gpt-4o\" automatically."
+      "description": "Model to use, as a provider/model string (e.g. \"openai/o4-mini\", \"anthropic/claude-sonnet-4.6\", \"gateway/openai/gpt-4o\"). Must include a provider prefix."
     },
     "systemPrompt": {
       "type": "string",
@@ -92,7 +92,7 @@
         "openaiApiKey": {
           "type": "string",
           "default": "OPENAI_API_KEY",
-          "description": "Env var holding the OpenAI API key (for direct openai/* model calls)."
+          "description": "Env var holding the OpenAI API key (for direct openai/* model calls). Requires @ai-sdk/openai to be installed."
         },
         "anthropicApiKey": {
           "type": "string",

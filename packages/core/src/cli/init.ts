@@ -129,8 +129,20 @@ function scanProject(root: string): ScanResult {
 
 // ── Interactive prompts ────────────────────────────────────────────────────
 
+// [envVar, displayLabel, agent.config.json env key]
+const KNOWN_PROVIDER_KEYS = [
+  ["OPENAI_API_KEY", "openai", "openaiApiKey"],
+  ["ANTHROPIC_API_KEY", "anthropic", "anthropicApiKey"],
+  ["GOOGLE_GENERATIVE_AI_API_KEY", "google", "googleApiKey"],
+  ["MISTRAL_API_KEY", "mistral", "mistralApiKey"],
+  ["GROQ_API_KEY", "groq", "groqApiKey"],
+  ["XAI_API_KEY", "xai", "xaiApiKey"],
+  ["DEEPSEEK_API_KEY", "deepseek", "deepseekApiKey"],
+  ["AI_GATEWAY_API_KEY", "gateway (Vercel AI Gateway)", "aiGatewayApiKey"],
+] as const;
+
 interface Answers {
-  openaiKeyVar: string;
+  providerEnv: Record<string, string>;
   databaseUrlVar: string;
   redisUrlVar: string;
   model: string;
@@ -142,11 +154,14 @@ interface Answers {
 }
 
 function buildDefaults(scan: ScanResult): Answers {
+  const providerEnv: Record<string, string> = {};
+  for (const [envVar, , configKey] of KNOWN_PROVIDER_KEYS) {
+    if (scan.detectedEnvVars.has(envVar)) {
+      providerEnv[configKey] = envVar;
+    }
+  }
   return {
-    openaiKeyVar: scan.detectedEnvVars.has("OPENAI_API_KEY")
-      ? "OPENAI_API_KEY"
-      : ([...scan.detectedEnvVars.keys()].find((k) => k.includes("OPENAI")) ??
-        "OPENAI_API_KEY"),
+    providerEnv,
     databaseUrlVar: scan.detectedEnvVars.has("AGENT_DATABASE_URL")
       ? "AGENT_DATABASE_URL"
       : scan.detectedEnvVars.has("DATABASE_URL")
@@ -197,16 +212,6 @@ async function askQuestions(
   console.log(`    Pkg mgr    : ${scan.packageManager}`);
 
   // Show detected provider keys
-  const KNOWN_PROVIDER_KEYS = [
-    ["OPENAI_API_KEY", "openai"],
-    ["ANTHROPIC_API_KEY", "anthropic"],
-    ["GOOGLE_GENERATIVE_AI_API_KEY", "google"],
-    ["MISTRAL_API_KEY", "mistral"],
-    ["GROQ_API_KEY", "groq"],
-    ["XAI_API_KEY", "xai"],
-    ["DEEPSEEK_API_KEY", "deepseek"],
-    ["AI_GATEWAY_API_KEY", "gateway"],
-  ] as const;
   const detectedProviders = KNOWN_PROVIDER_KEYS
     .filter(([k]) => scan.detectedEnvVars.has(k))
     .map(([, label]) => label);
@@ -214,31 +219,16 @@ async function askQuestions(
 
   if (useDefaults) {
     console.log("  Using all defaults (--default flag set):\n");
-    console.log(`    OpenAI key var : ${defaults.openaiKeyVar}`);
     console.log(`    Database URL   : ${defaults.databaseUrlVar}`);
     console.log(`    Redis URL      : ${defaults.redisUrlVar}`);
     console.log(`    Model          : ${defaults.model}`);
     console.log(`    System prompt  : ${defaults.systemPrompt}`);
     console.log(`    API base path  : ${defaults.apiBasePath}\n`);
 
-    // Show which provider keys were detected
-    const KNOWN_PROVIDER_KEYS = [
-      ["OPENAI_API_KEY", "openai"],
-      ["ANTHROPIC_API_KEY", "anthropic"],
-      ["GOOGLE_GENERATIVE_AI_API_KEY", "google"],
-      ["MISTRAL_API_KEY", "mistral"],
-      ["GROQ_API_KEY", "groq"],
-      ["XAI_API_KEY", "xai"],
-      ["DEEPSEEK_API_KEY", "deepseek"],
-      ["AI_GATEWAY_API_KEY", "gateway (Vercel AI Gateway)"],
-    ] as const;
-    const detected = KNOWN_PROVIDER_KEYS
-      .filter(([k]) => scan.detectedEnvVars.has(k))
-      .map(([, label]) => label);
-    if (detected.length > 0) {
-      console.log(`  Detected provider keys: ${detected.join(", ")}\n`);
+    if (detectedProviders.length > 0) {
+      console.log(`  Detected provider keys: ${detectedProviders.join(", ")}\n`);
     } else {
-      console.log("  No provider keys detected in .env* files. Add OPENAI_API_KEY (or another provider key) before starting.\n");
+      console.log("  No provider keys detected in .env* files. Add at least one provider key (e.g. OPENAI_API_KEY, ANTHROPIC_API_KEY) before starting.\n");
     }
 
     return defaults;
@@ -261,10 +251,6 @@ async function askQuestions(
       "  type the correct name. Otherwise press Enter to accept.\n",
   );
 
-  const openaiKeyVar = await prompt(
-    "OpenAI API key env var name",
-    defaults.openaiKeyVar,
-  );
   const databaseUrlVar = await prompt(
     "PostgreSQL DATABASE_URL env var name",
     defaults.databaseUrlVar,
@@ -317,7 +303,7 @@ async function askQuestions(
   rl.close();
 
   return {
-    openaiKeyVar,
+    providerEnv: defaults.providerEnv,
     databaseUrlVar,
     redisUrlVar,
     model,
@@ -640,7 +626,7 @@ function configTemplate(answers: Answers): string {
       "Summarize recent developments in technology",
     ],
     env: {
-      openaiApiKey: answers.openaiKeyVar,
+      ...answers.providerEnv,
       databaseUrl: answers.databaseUrlVar,
       redisUrl: answers.redisUrlVar,
     },
@@ -962,7 +948,7 @@ export async function initCommand(
     `${JSON.stringify({ name: "gluon-agent", private: true, type: "module" }, null, 2)}\n`,
   );
 
-  // 4. Web search tool (default example — OpenAI web search, uses OPENAI_API_KEY)
+  // 4. Web search tool (default example — uses OpenAI's built-in web search via OPENAI_API_KEY)
   write(path.join(root, "agent/tools/webSearch.ts"), webSearchTool());
 
   // 4b. Datetime context provider (scaffolded as a working example)
@@ -1009,13 +995,11 @@ export async function initCommand(
 
   1. Add your secrets to .env.local (or your platform env):
 
-       # Required for the default openai/gpt-4o model:
-       ${answers.openaiKeyVar}=sk-...
-
-       # Add keys for any other providers you want to use:
-       # ANTHROPIC_API_KEY=sk-ant-...   (requires: npm i @ai-sdk/anthropic)
-       # GOOGLE_GENERATIVE_AI_API_KEY=... (requires: npm i @ai-sdk/google)
-       # AI_GATEWAY_API_KEY=...          (enables gateway/* model prefix)
+       # At least one AI provider key is required. Examples:
+       # OPENAI_API_KEY=sk-...               (install: npm i @ai-sdk/openai)
+       # ANTHROPIC_API_KEY=sk-ant-...        (install: npm i @ai-sdk/anthropic)
+       # GOOGLE_GENERATIVE_AI_API_KEY=...    (install: npm i @ai-sdk/google)
+       # AI_GATEWAY_API_KEY=...              (enables gateway/* model prefix — no per-provider package needed)
 
        ${answers.databaseUrlVar}=postgresql://...   ← agent tables DB connection
        ${answers.redisUrlVar}=redis://...

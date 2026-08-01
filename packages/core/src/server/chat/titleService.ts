@@ -54,8 +54,8 @@ async function generateTitle(
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export interface ScheduleChatTitleOptions {
-  /** Model ID to use for title generation (e.g. "openai/gpt-4o-mini"). */
-  modelId?: string;
+  /** Model ID to use for title generation (e.g. "openai/gpt-4o-mini", "anthropic/claude-haiku-3.5"). Must use provider/model format. */
+  modelId: string;
   /** Env config from agent.config.json — used to resolve the correct API keys. */
   envConfig?: AgentConfig["env"];
 }
@@ -69,7 +69,7 @@ export interface ScheduleChatTitleOptions {
 export function scheduleChatTitleGeneration(
   chatId: string,
   userId: string,
-  options: ScheduleChatTitleOptions = {},
+  options: ScheduleChatTitleOptions,
 ): void {
   void (async () => {
     const titleRow = await chatRepository.findTitleForChat(chatId);
@@ -81,9 +81,7 @@ export function scheduleChatTitleGeneration(
     const contextText = extractContextText(messages);
     if (!contextText.trim()) return;
 
-    const modelId = options.modelId ?? "openai/gpt-4o-mini";
-
-    const title = await generateTitle(contextText, modelId, options.envConfig).catch(
+    const title = await generateTitle(contextText, options.modelId, options.envConfig).catch(
       (err) => {
         console.error("[titleService] generation failed:", err);
         return null;
