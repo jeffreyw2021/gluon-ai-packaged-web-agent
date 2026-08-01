@@ -26,8 +26,9 @@ Built for myself. Shared in case it's useful.
 
 ```bash
 npm install gluon-ai@beta
-# or: pnpm add gluon-ai@beta
 ```
+
+> **Package manager:** npm is the supported path for host apps right now. pnpm can install the package, but init / Prisma generate / local `file:` linking (`--development`) are npm-first and often break under pnpm’s store layout. Use npm for consumer projects until that’s fixed.
 
 Put secrets in `.env` / `.env.local` **before** init (the wizard detects existing names):
 
