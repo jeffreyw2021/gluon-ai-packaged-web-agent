@@ -104,6 +104,9 @@ const PROVIDERS = [
     configKey: "openaiApiKey",
     defaultModel: "openai/o4-mini",
     sdkPackage: "@ai-sdk/openai",
+    // @ai-sdk/openai@4+ switched to Responses-API spec v4, which is incompatible
+    // with the ai@6.x (AI SDK 5) bundled inside gluon-ai. Pin to ^3.
+    sdkVersion: "3",
   },
   {
     label: "Anthropic",
@@ -111,6 +114,7 @@ const PROVIDERS = [
     configKey: "anthropicApiKey",
     defaultModel: "anthropic/claude-sonnet-4-5",
     sdkPackage: "@ai-sdk/anthropic",
+    sdkVersion: "4",
   },
   {
     label: "Google",
@@ -118,6 +122,7 @@ const PROVIDERS = [
     configKey: "googleApiKey",
     defaultModel: "google/gemini-2.0-flash",
     sdkPackage: "@ai-sdk/google",
+    sdkVersion: "4",
   },
   {
     label: "Other / configure manually",
@@ -125,6 +130,7 @@ const PROVIDERS = [
     configKey: "",
     defaultModel: "openai/o4-mini",
     sdkPackage: "",
+    sdkVersion: "",
   },
 ] as const;
 
@@ -236,8 +242,9 @@ function agentConfigTemplate(answers: Answers): string {
   return JSON.stringify(cfg, null, 2);
 }
 
-function dockerfileTemplate(sdkPackage?: string): string {
-  const globalPkgs = ["gluon-ai@beta", "tsx", "prisma@6", sdkPackage].filter(Boolean).join(" ");
+function dockerfileTemplate(sdkPackage?: string, sdkVersion?: string): string {
+  const versionedSdkPkg = sdkPackage && sdkVersion ? `${sdkPackage}@${sdkVersion}` : sdkPackage;
+  const globalPkgs = ["gluon-ai@beta", "tsx", "prisma@6", versionedSdkPkg].filter(Boolean).join(" ");
   return `FROM node:24-slim
 
 # Prisma's query engine binary requires OpenSSL at runtime
@@ -321,9 +328,9 @@ volumes:
 `;
 }
 
-function agentPackageJsonTemplate(sdkPackage?: string): string {
+function agentPackageJsonTemplate(sdkPackage?: string, sdkVersion?: string): string {
   const deps: Record<string, string> = { "gluon-ai": "beta" };
-  if (sdkPackage) deps[sdkPackage] = "latest";
+  if (sdkPackage) deps[sdkPackage] = sdkVersion ?? "latest";
   return `${JSON.stringify(
     { name: "gluon-agent", private: true, type: "module", dependencies: deps },
     null,
@@ -517,18 +524,19 @@ export async function initCommand(
   );
 
   const sdkPkg = PROVIDERS[answers.providerIndex].sdkPackage || undefined;
+  const sdkVer = PROVIDERS[answers.providerIndex].sdkVersion || undefined;
 
   // gluon/agent.config.json
   write(path.join(gluonDir, "agent.config.json"), agentConfigTemplate(answers));
 
   // gluon/Dockerfile
-  write(path.join(gluonDir, "Dockerfile"), dockerfileTemplate(sdkPkg));
+  write(path.join(gluonDir, "Dockerfile"), dockerfileTemplate(sdkPkg, sdkVer));
 
   // gluon/docker-compose.yml
   write(path.join(gluonDir, "docker-compose.yml"), dockerComposeTemplate(answers.port));
 
   // gluon/agent/package.json
-  write(path.join(gluonDir, "agent", "package.json"), agentPackageJsonTemplate(sdkPkg));
+  write(path.join(gluonDir, "agent", "package.json"), agentPackageJsonTemplate(sdkPkg, sdkVer));
 
   // gluon/agent/system-prompt.md
   write(path.join(gluonDir, "agent", "system-prompt.md"), systemPromptTemplate());
