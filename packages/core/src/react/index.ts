@@ -41,11 +41,11 @@ export type { UseComposerActionsOptions, UseComposerActionsReturn } from "./hook
 export { GluonAgentPanel } from "./panel/GluonAgentPanel";
 export type { GluonAgentPanelProps } from "./panel/GluonAgentPanel";
 
-// ── Layer 2: Styled atoms ─────────────────────────────────────────────────
+// ── Layer 2: Styled atomic components ─────────────────────────────────────
 // Short-named, default-styled fine-grained controls. Wired to AgentProvider.
 // Can be used standalone or composed into custom region layouts.
 
-// Top-bar atoms
+// Top-bar components
 export { NewChatButton } from "./styled/NewChatButton";
 export type { NewChatButtonProps } from "./styled/NewChatButton";
 
@@ -61,14 +61,14 @@ export type { ChatSelectMenuProps } from "./styled/ChatSelectMenu";
 export { ChatSelectMenuItem } from "./styled/ChatSelectMenuItem";
 export type { ChatSelectMenuItemProps } from "./styled/ChatSelectMenuItem";
 
-// Message-list atoms
+// Message-list components
 export { EmptyView } from "./styled/EmptyView";
 export type { EmptyViewProps } from "./styled/EmptyView";
 
 export { SuggestedPromptButton } from "./styled/SuggestedPromptButton";
 export type { SuggestedPromptButtonProps } from "./styled/SuggestedPromptButton";
 
-// Input-bar atoms
+// Input-bar components
 export { AttachButton } from "./styled/AttachButton";
 export type { AttachButtonProps } from "./styled/AttachButton";
 
@@ -85,8 +85,8 @@ export { SendButton } from "./styled/SendButton";
 export type { SendButtonProps } from "./styled/SendButton";
 
 // ── Layer 3: Compose regions ─────────────────────────────────────────────
-// Self-contained region components built from Layer 2 atoms. Provide
-// region-level layout, slot overrides, and dark-mode prop passthrough.
+// Self-contained region components built from Layer 2 styled components.
+// Provide region-level layout, slot overrides, and dark-mode prop passthrough.
 export { AgentPanel } from "./panel/AgentPanel";
 export type { AgentPanelProps, AgentPanelClassNames, AgentPanelStyles } from "./panel/AgentPanel";
 

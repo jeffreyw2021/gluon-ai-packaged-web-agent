@@ -54,7 +54,7 @@ export interface ChatTopBarProps {
 
 /**
  * Self-contained top control bar for the agent chat UI.
- * Now composed from Layer 2 atoms: `NewChatButton`, `ModeSwitch`, `ChatSelect`.
+ * Now composed from Layer 2 styled components: `NewChatButton`, `ModeSwitch`, `ChatSelect`.
  *
  * Must be rendered inside `<AgentProvider>`. All data is sourced automatically.
  */

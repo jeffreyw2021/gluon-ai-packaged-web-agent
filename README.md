@@ -19,7 +19,7 @@ Built for myself. Shared in case it's useful.
 | React 19+   |                                                                                                                               |
 | PostgreSQL  | Best supported. MySQL / SQLite available via init; less battle-tested                                                         |
 | Redis       | Required for the BullMQ worker + live events                                                                                  |
-| AI provider | OpenAI, Anthropic, Google, Mistral, Groq, xAI, DeepSeek, or Vercel AI Gateway — see [AI model providers](#ai-model-providers) |
+| AI provider | OpenAI, Anthropic, Google, Mistral, Groq, xAI, DeepSeek, or Vercel AI Gateway. See [AI model providers](#ai-model-providers) |
 
 
 ---
@@ -63,9 +63,9 @@ That's enough for a working agent with web search, multi-chat, streaming, and th
 | Path                        | Purpose                                                                                |
 | --------------------------- | -------------------------------------------------------------------------------------- |
 | `agent.config.json`         | Model, tools, auth, prompts, env remaps                                                |
-| `agent/package.json`        | `{ "type": "module" }` — silences Node ESM warnings when loading tools                 |
+| `agent/package.json`        | `{ "type": "module" }`; silences Node ESM warnings when loading tools                  |
 | `agent/system-prompt.md`    | Default system prompt (edit this freely)                                               |
-| `agent/tools/webSearch.ts`  | Example tool (OpenAI-native web search — requires `OPENAI_API_KEY` + `@ai-sdk/openai`) |
+| `agent/tools/webSearch.ts`  | Example tool (OpenAI-native web search; requires `OPENAI_API_KEY` + `@ai-sdk/openai`)  |
 | `agent/context/datetime.ts` | Example context provider (current date/time)                                           |
 | `[app                       | src/app]/api/gluon-ai/[[...path]]/route.ts`                                            |
 | `instrumentation.ts`        | Starts the BullMQ worker on Next.js boot                                               |
@@ -75,11 +75,11 @@ Also:
 
 - Patches `next.config` with `serverExternalPackages: ["gluon-ai"]`
 - Adds `gluon:uninstall` to your `package.json` scripts
-- Creates agent tables (`gluon_chat`, `gluon_chat_job_run`) with idempotent SQL — your existing Prisma schema is never modified
+- Creates agent tables (`gluon_chat`, `gluon_chat_job_run`) with idempotent SQL. Your existing Prisma schema is never modified
 
 ```
 agent/
-  package.json          # { "type": "module" } — required for Node dynamic imports
+  package.json          # { "type": "module" }; required for Node dynamic imports
   system-prompt.md
   tools/
     webSearch.ts
@@ -97,11 +97,11 @@ instrumentation.ts
 
 ---
 
-## Frontend — four layers of UI
+## Frontend: four layers of UI
 
 Everything lives under `gluon-ai/react`. Pick the layer that matches how much control you want.
 
-### 1. Drop-in — `GluonAgentPanel` (recommended)
+### 1. Drop-in: `GluonAgentPanel` (recommended)
 
 Provider + top bar + messages + input, with built-in styles.
 
@@ -127,9 +127,9 @@ import { GluonAgentPanel } from "gluon-ai/react";
 | `children`                            | Replace the default body while keeping `AgentProvider`       |
 
 
-### 2. Styled atoms — Layer 2
+### 2. Styled atomic components (Layer 2)
 
-Fine-grained, default-styled controls. Wire one atom at a time into your own layout:
+Fine-grained, default-styled controls. Wire one component at a time into your own layout:
 
 ```tsx
 import {
@@ -145,7 +145,7 @@ import {
 } from "gluon-ai/react";
 
 <AgentProvider basePath="/api/gluon-ai">
-  {/* your own layout — place atoms wherever you like */}
+  {/* your own layout; place components wherever you like */}
   <NewChatButton />
   <ModeSwitch />
   <ChatSelect />
@@ -160,9 +160,9 @@ import {
 </AgentProvider>
 ```
 
-All atoms read from `AgentProvider` — no data props required. Only pass props to override.
+All of these components read from `AgentProvider`; no data props required. Only pass props to override.
 
-**Top-bar atoms**
+**Top-bar components**
 
 
 | Export               | Description                                                           |
@@ -174,7 +174,7 @@ All atoms read from `AgentProvider` — no data props required. Only pass props 
 | `ChatSelectMenuItem` | Single chat row with delete affordance                                |
 
 
-**Message-list atoms**
+**Message-list components**
 
 
 | Export                  | Description                                                            |
@@ -185,7 +185,7 @@ All atoms read from `AgentProvider` — no data props required. Only pass props 
 
 `EmptyView` props: `maxSuggestedPrompts` (default `3`), `suggestedPrompts` (falls back to context), `onSelect`, `darkMode`, `components.SuggestedPromptButton`.
 
-**Input-bar atoms**
+**Input-bar components**
 
 
 | Export                   | Description                                                                             |
@@ -197,9 +197,9 @@ All atoms read from `AgentProvider` — no data props required. Only pass props 
 | `SendButton`             | Styled send/stop toggle; wires `adapter` automatically                                  |
 
 
-### 3. Compose regions — Layer 3
+### 3. Compose regions (Layer 3)
 
-Same styled atoms, assembled into full-height regions. Use when you want to replace one region (e.g. a custom top bar) while keeping the others as-is:
+Same styled atomic components, assembled into full-height regions. Use when you want to replace one region (e.g. a custom top bar) while keeping the others as-is:
 
 ```tsx
 import {
@@ -222,15 +222,15 @@ import {
 
 `ChatInputBar`: `placeholder`, `disclaimer`, `attach`, `voice`, `slots.sendButton`, `style` / `className` / `styles`, `darkMode`.
 
-### 4. Headless — full control
+### 4. Headless: full control
 
-Behavior-only primitives. Zero built-in styles — supply your own CSS.
+Behavior-only primitives. Zero built-in styles; supply your own CSS.
 
 ```tsx
 import { AgentProvider } from "gluon-ai/react";
 
 <AgentProvider basePath="/api/gluon-ai">
-  {/* anything from gluon goes here — assemble as you like; see below */}
+  {/* anything from gluon goes here; assemble as you like (see below) */}
 </AgentProvider>
 ```
 
@@ -239,7 +239,7 @@ import { AgentProvider } from "gluon-ai/react";
 
 | Export                      | Description                                                                                                                                                                         |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AgentPanel`                | Headless skeleton with `data-slot` regions (`agent-panel`, `sidebar`, `main`, `header`, `body`, `input`). No built-in CSS — style via CSS or `classNames` / `styles` / render props |
+| `AgentPanel`                | Headless skeleton with `data-slot` regions (`agent-panel`, `sidebar`, `main`, `header`, `body`, `input`). No built-in CSS; style via CSS or `classNames` / `styles` / render props |
 | `ChatList` / `ChatListItem` | Chat history list + single row                                                                                                                                                      |
 
 
@@ -261,10 +261,10 @@ import { AgentProvider } from "gluon-ai/react";
 
 | Export                                  | Description                                                   |
 | --------------------------------------- | ------------------------------------------------------------- |
-| `HeadlessChatInput`                     | Composer (textarea + wiring for send/stop/attach) — no styles |
-| `HeadlessSendButton`                    | Send control (send-only, no stop) — no styles                 |
-| `HeadlessAttachButton`                  | File attach control — no styles                               |
-| `StopButton`                            | Cancel-run control — no styles                                |
+| `HeadlessChatInput`                     | Composer (textarea + wiring for send/stop/attach); no styles |
+| `HeadlessSendButton`                    | Send control (send-only, no stop); no styles                  |
+| `HeadlessAttachButton`                  | File attach control; no styles                                |
+| `StopButton`                            | Cancel-run control; no styles                                 |
 | `RecordButton` / `TranscribeButton`     | Voice record / speech-to-text controls                        |
 | `RecordingIndicator` / `LiveTranscript` | Recording state + live transcript display                     |
 | `AttachmentChip`                        | Chip for an attached file                                     |
@@ -320,7 +320,7 @@ import { AgentProvider } from "gluon-ai/react";
 
 | Field                        | What it does                                                            |
 | ---------------------------- | ----------------------------------------------------------------------- |
-| `model`                      | `provider/model` string — see [AI model providers](#ai-model-providers) |
+| `model`                      | `provider/model` string. See [AI model providers](#ai-model-providers) |
 | `systemPrompt`               | Inline string **or** path to a `.md` / `.txt` file                      |
 | `tools`                      | Map of tool name → `defineTool` module path                             |
 | `skills`                     | Markdown docs the agent can load via built-in `read_skill`              |
@@ -341,7 +341,7 @@ Full schema: `[packages/core/agent.config.schema.json](packages/core/agent.confi
 
 Set `model` in `agent.config.json` to a `provider/model` string. The prefix selects the provider; everything else is the model ID.
 
-For each provider, set its API key **and** install its optional SDK package. Gluon detects both at startup and registers the provider automatically — no code changes needed.
+For each provider, set its API key **and** install its optional SDK package. Gluon detects both at startup and registers the provider automatically. No code changes needed.
 
 
 | Provider  | Model prefix | Env var                        | Install                   |
@@ -355,7 +355,7 @@ For each provider, set its API key **and** install its optional SDK package. Glu
 | DeepSeek  | `deepseek`   | `DEEPSEEK_API_KEY`             | `npm i @ai-sdk/deepseek`  |
 
 
-All provider packages are optional. If a provider's package is missing or its key is not set, that prefix is silently skipped — no error, just unavailable.
+All provider packages are optional. If a provider's package is missing or its key is not set, that prefix is silently skipped (no error, just unavailable).
 
 Example:
 
@@ -375,9 +375,9 @@ ANTHROPIC_API_KEY=sk-ant-...
 { "model": "anthropic/claude-sonnet-4.6" }
 ```
 
-### Via Vercel AI Gateway (optional — skips per-provider packages)
+### Via Vercel AI Gateway (optional; skips per-provider packages)
 
-Prefix any model string with `gateway/` to route through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). One key covers every supported model — no per-provider packages needed.
+Prefix any model string with `gateway/` to route through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). One key covers every supported model; no per-provider packages needed.
 
 ```env
 AI_GATEWAY_API_KEY=your_gateway_key
@@ -411,8 +411,8 @@ Three built-in tools are always available, regardless of what you configure:
 | Tool                   | When it fires                                                                                                                |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `discover_tools`       | Agent calls this automatically before using any custom tool for the first time to read descriptions and parameter signatures |
-| `request_confirmation` | Called when a tool has `needsApproval: true` — pauses the run and shows a confirmation card in the UI                        |
-| `read_skill`           | Added automatically when `skills` is non-empty — lets the agent load a skill document on demand                              |
+| `request_confirmation` | Called when a tool has `needsApproval: true`; pauses the run and shows a confirmation card in the UI                         |
+| `read_skill`           | Added automatically when `skills` is non-empty; lets the agent load a skill document on demand                               |
 
 
 ### Defining a tool
@@ -449,14 +449,14 @@ All `defineTool` fields:
 
 | Field               | Required | Description                                                                                          |
 | ------------------- | -------- | ---------------------------------------------------------------------------------------------------- |
-| `description`       | Yes      | Shown to the model — describe what the tool does and when to use it                                  |
+| `description`       | Yes      | Shown to the model; describe what the tool does and when to use it                                   |
 | `inputSchema`       | Yes      | Zod schema; the model must match it; used for TypeScript types in `execute`                          |
 | `execute`           | Yes      | Called with the validated input when the agent decides to invoke the tool                            |
 | `displayLabel`      | No       | Short human-readable name shown in the UI (e.g. "Web Search")                                        |
-| `needsApproval`     | No       | `true` / `false` or a function `(input) => boolean` — see below                                      |
+| `needsApproval`     | No       | `true` / `false` or a function `(input) => boolean`. See below                                       |
 | `ui.executingLabel` | No       | ThoughtWindow text while the tool is running (e.g. `"Searching…"`)                                   |
 | `ui.completedLabel` | No       | ThoughtWindow text after the tool finishes (e.g. `"Search done"`)                                    |
-| `ui.icon`           | No       | Lucide icon name for the ThoughtWindow row (e.g. `"Globe"`, `"FileText"`) — defaults to `"Settings"` |
+| `ui.icon`           | No       | Lucide icon name for the ThoughtWindow row (e.g. `"Globe"`, `"FileText"`); defaults to `"Settings"` |
 
 
 ### Human approval
@@ -468,7 +468,7 @@ Set `needsApproval: true` (or a function that inspects the input and returns `tr
 needsApproval: ({ query }) => query.toLowerCase().includes("delete"),
 ```
 
-The `request_confirmation` built-in tool handles the pause/resume handshake automatically — you do not need to wire anything in the UI beyond rendering `ChatMessageList` or `MessageList` (which includes `ConfirmationBlock`).
+The `request_confirmation` built-in tool handles the pause/resume handshake automatically. You do not need to wire anything in the UI beyond rendering `ChatMessageList` or `MessageList` (which includes `ConfirmationBlock`).
 
 ### Scaffolding with the CLI
 
@@ -483,7 +483,7 @@ npx gluon-ai add-tool my_tool
 
 ### What skills are
 
-Skills are Markdown documents the agent **reads on demand** — they are never injected into every request's system prompt. When `skills` is non-empty, gluon adds a `read_skill` tool and instructs the agent to call it before using domain-specific tools. This keeps request context small while giving the agent access to deep documentation when it needs it.
+Skills are Markdown documents the agent **reads on demand**. They are never injected into every request's system prompt. When `skills` is non-empty, gluon adds a `read_skill` tool and instructs the agent to call it before using domain-specific tools. This keeps request context small while giving the agent access to deep documentation when it needs it.
 
 Typical uses: step-by-step procedures, domain glossaries, API cheat-sheets, policy documents.
 
@@ -498,7 +498,7 @@ npx gluon-ai add-skill how-to-search
 # → writes agent/skills/how-to-search.md and registers it in agent.config.json
 ```
 
-Edit the generated file with whatever the agent should know. Plain Markdown — headings, code blocks, bullet lists all work:
+Edit the generated file with whatever the agent should know. Plain Markdown works: headings, code blocks, bullet lists:
 
 ```markdown
 <!-- agent/skills/how-to-search.md -->
@@ -536,7 +536,7 @@ Use **skills** for large reference material that is only sometimes needed. Use *
 
 ### What context providers do
 
-A context provider is a plain async function that returns a string. Gluon calls every registered provider **fresh on every agent request** and appends the results to the system prompt under a `## Context` block. The agent always sees current values — no stale cache.
+A context provider is a plain async function that returns a string. Gluon calls every registered provider **fresh on every agent request** and appends the results to the system prompt under a `## Context` block. The agent always sees current values (no stale cache).
 
 ### Default behaviour
 
@@ -555,7 +555,7 @@ export default async function (): Promise<string> {
 { "context": ["./agent/context/datetime.ts"] }
 ```
 
-The returned string is appended verbatim under `## Context` in the system prompt. Keep it short — it costs tokens on every request.
+The returned string is appended verbatim under `## Context` in the system prompt. Keep it short; it costs tokens on every request.
 
 ### Multiple providers
 
@@ -573,7 +573,7 @@ List any number of files; each one contributes a line to the `## Context` block:
 
 ### Accessing external data
 
-Context providers are regular async functions — you can fetch from your DB, call an API, or read environment variables:
+Context providers are regular async functions. You can fetch from your DB, call an API, or read environment variables:
 
 ```typescript
 // agent/context/userProfile.ts
@@ -614,7 +614,7 @@ The handler is a TypeScript file that **default-exports** an async function rece
 
 
 ```typescript
-// agent/auth.ts  — example using NextAuth v5
+// agent/auth.ts  (example using NextAuth v5)
 import { auth } from "@/auth";
 
 export default async function (req: Request): Promise<string | boolean | null> {
@@ -628,8 +628,8 @@ export default async function (req: Request): Promise<string | boolean | null> {
 
 Once a userId is returned, Gluon:
 
-- **Scopes all chat sessions** to that userId — users only see their own chat history.
-- **Scopes all run records** to that userId — billing, rate-limiting, and logs are per-user.
+- **Scopes all chat sessions** to that userId. Users only see their own chat history.
+- **Scopes all run records** to that userId. Billing, rate-limiting, and logs are per-user.
 - Passes the userId to **lifecycle hooks** (`onRunStart`, `onRunEnd`, `onRunError`) so you can record usage, enforce rate limits, or trigger billing per user.
 
 ### Role-based access
@@ -637,7 +637,7 @@ Once a userId is returned, Gluon:
 Return `null` (401) for any user you want to block, or segment access by returning different user IDs based on your own logic:
 
 ```typescript
-// agent/auth.ts — block non-admins from the agent endpoint
+// agent/auth.ts (block non-admins from the agent endpoint)
 import { auth } from "@/auth";
 
 export default async function (req: Request) {
@@ -654,7 +654,7 @@ export default async function (req: Request) {
 
 ### What action blocks do
 
-An action block is a React component that replaces the default tool-row in the chat stream for a specific tool. By default, tool calls show a text row in the ThoughtWindow (using `ui.executingLabel` / `ui.completedLabel`). Register an action block to render a full UI card — a map, a data table, a preview — inside the message thread instead.
+An action block is a React component that replaces the default tool-row in the chat stream for a specific tool. By default, tool calls show a text row in the ThoughtWindow (using `ui.executingLabel` / `ui.completedLabel`). Register an action block to render a full UI card (a map, a data table, a preview) inside the message thread instead.
 
 ### Default behaviour (no action blocks)
 
@@ -692,7 +692,7 @@ All `ActionBlockProps` fields:
 
 ### Wiring the component to the client
 
-The config path is used for server-side loading only. The client bundle can't load TypeScript paths at runtime — you must pass the imported component explicitly:
+The config path is used for server-side loading only. The client bundle can't load TypeScript paths at runtime, so you must pass the imported component explicitly:
 
 ```tsx
 import MyToolBlock from "@/agent/blocks/MyToolBlock";
@@ -749,7 +749,7 @@ export async function onRunError(ctx: {
 }
 ```
 
-`usage` is summed across all tool-call rounds in the run — it reflects the total cost of the full agent loop, not just the final response step.
+`usage` is summed across all tool-call rounds in the run. It reflects the total cost of the full agent loop, not just the final response step.
 
 ### Client-side token display
 
@@ -815,7 +815,7 @@ npm run gluon:uninstall
 | `gluon-ai/routes`          | Catch-all `GET` / `POST` / `DELETE` handlers                     |
 | `gluon-ai/tool`            | Tool helpers / types                                             |
 | `gluon-ai/server`          | Commands, queue, Redis, DB adapter types                         |
-| `gluon-ai/instrumentation` | `register()` — starts the worker                                 |
+| `gluon-ai/instrumentation` | `register()` starts the worker                                   |
 | `gluon-ai/cli`             | CLI command implementations (used by the `gluon-ai` bin)         |
 
 
