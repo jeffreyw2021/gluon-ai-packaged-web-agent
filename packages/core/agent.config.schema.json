@@ -1,10 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/yourusername/gluon-ai/blob/main/packages/core/agent.config.schema.json",
+  "$id": "https://github.com/jeffreyw2021/gluon-ai-packaged-web-agent/blob/main/packages/core/agent.config.schema.json",
   "title": "AgentConfig",
   "description": "Configuration file for gluon-ai (agent.config.json)",
   "type": "object",
-  "required": ["auth"],
   "properties": {
     "model": {
       "type": "string",
@@ -46,19 +45,20 @@
     },
     "context": {
       "type": "array",
-      "description": "Array of relative paths to .ts files that each export a default async function () => Promise<string>. Gluon calls every provider fresh on each agent request and injects the returned strings into the system prompt under a '## Context' block. Use this for dynamic runtime information such as the current date/time, active user data, or environment state.",
+      "description": "Array of relative paths to .ts files that each export a default async function () => Promise<string>. Gluon calls every provider fresh on each agent request and injects the returned strings into the system prompt under a '## Context' block.",
       "items": { "type": "string" },
       "default": []
     },
     "auth": {
       "type": "object",
-      "required": ["getUserId"],
       "properties": {
-        "getUserId": {
+        "handler": {
           "type": "string",
-          "description": "Relative path to a .ts file that exports a default async function (req: Request) => Promise<string | null>."
+          "default": "allow",
+          "description": "\"allow\" | \"deny\" | relative path to a .ts file that default-exports async (req: Request) => string | boolean | null."
         }
-      }
+      },
+      "default": { "handler": "allow" }
     },
     "hooks": {
       "type": "string",
@@ -96,13 +96,29 @@
         },
         "databaseUrl": {
           "type": "string",
-          "default": "DATABASE_URL",
-          "description": "Name of the env var holding the PostgreSQL connection string."
+          "default": "AGENT_DATABASE_URL",
+          "description": "Name of the env var holding the agent database connection string."
         },
         "redisUrl": {
           "type": "string",
           "default": "REDIS_URL",
           "description": "Name of the env var holding the Redis connection string."
+        }
+      }
+    },
+    "db": {
+      "type": "object",
+      "description": "Database adapter settings. Omit for built-in Prisma + PostgreSQL.",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["postgresql", "mysql", "sqlite", "sqlserver"],
+          "default": "postgresql",
+          "description": "Provider for the built-in Prisma adapter. Ignored when adapter is set."
+        },
+        "adapter": {
+          "type": "string",
+          "description": "Relative path to a custom GluonDatabaseAdapter module. When set, built-in Prisma is not used."
         }
       }
     }

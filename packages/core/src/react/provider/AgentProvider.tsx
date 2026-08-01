@@ -54,7 +54,7 @@ export interface AgentProviderProps {
   children: ReactNode;
   /** Override query client if you already have one. */
   queryClient?: QueryClient;
-  /** Base path for agent API routes. Default: "/api/agent" */
+  /** Base path for agent API routes. Default: "/api/gluon-ai" */
   basePath?: string;
   /** Action block components keyed by tool name. */
   actionBlocks?: ActionBlockRegistry;

@@ -1,40 +1,35 @@
 # gluon-ai
 
-> **Beta** - personal project, rough edges expected.
+> **Beta** — personal project, rough edges expected.
 
-Sometimes we want to build an AI-native product from scratch, but sometimes we just want an agent built into an existing product made before the AI era. The latter shouldn't be that hard. The backend structure is essentially identical and replicable across all those projects. This is why I built gluon: with a pre-packed backend that has all the logic ready, developers can take a client-side-first approach to drop an agent into their existing web app and make it work, without rebuilding the same infrastructure for the tenth time.
+Sometimes you want to build an AI-native product from scratch. Sometimes you just want an agent inside an existing product. The backend for that second case is mostly the same every time — chats, streaming, tools, a worker, Redis, a DB. Gluon packages that stack so you can drop an agent into a Next.js app and focus on the product side.
 
-Built for myself. Shared in case it's useful to you.
+Built for myself. Shared in case it's useful.
 
 ---
 
 ## Compatibility
 
-**Next.js only** for now, because that's my main stack and first-class support matters more than broad compatibility right now. The package requires:
+**Next.js only** for now.
 
-- Next.js 15+
-- React 19+
-- PostgreSQL _(best supported; other providers work but may have bugs, still testing)_
-- Redis
-- OpenAI API _(only provider supported at the moment)_
-
-Other DB providers (MySQL, SQLite) are available through the init wizard but not battle-tested yet.
+| Requirement | Notes |
+| ----------- | ----- |
+| Next.js 15+ | App Router |
+| React 19+ | |
+| PostgreSQL | Best supported. MySQL / SQLite available via init; less battle-tested |
+| Redis | Required for the BullMQ worker + live events |
+| OpenAI API | Only provider supported right now |
 
 ---
 
-## Install
+## Quick start
 
 ```bash
 npm install gluon-ai@beta
-# or
-pnpm add gluon-ai@beta
+# or: pnpm add gluon-ai@beta
 ```
 
----
-
-## Init
-
-Before running init, add your secrets to `.env` (or `.env.local`). The wizard will auto-detect existing env var names and use them as defaults. The names below are the package defaults; you can use any names you want and set them during the init prompts:
+Put secrets in `.env` / `.env.local` **before** init (the wizard detects existing names):
 
 ```env
 OPENAI_API_KEY=sk-...
@@ -42,112 +37,140 @@ AGENT_DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
 REDIS_URL=redis://localhost:6379
 ```
 
-Then run the interactive setup wizard from your project root:
-
 ```bash
-npx gluon-ai init
+npx gluon-ai init          # interactive
+# or
+npx gluon-ai init --default   # accept all defaults (-y also works)
 ```
-
-This will ask you a few questions (env var names, model, API path, DB provider) then scaffold everything automatically:
-
-| Created                                   | Purpose                                              |
-| ----------------------------------------- | ---------------------------------------------------- |
-| `agent.config.json`                       | Central config: model, tools, prompts, auth          |
-| `agent/tools/webSearch.ts`                | Example tool (web search via OpenAI)                 |
-| `[app]/api/gluon-ai/[[...path]]/route.ts` | Single catch-all API route                           |
-| `instrumentation.ts`                      | Starts the BullMQ worker via Next.js instrumentation |
-
-It also patches `next.config` (`serverExternalPackages`) and adds a `gluon:uninstall` script to your `package.json`.
-
-The agent database tables (`gluon_chat`, `gluon_chat_job_run`) are created automatically during init using idempotent SQL. Your existing schema and tables are never touched. This is why your DB env var needs to be set before running init.
-
-> **Skip the prompts:** `npx gluon-ai init --default` accepts all defaults instantly.
-
-### What gets added to your project
-
-```
-agent/
-  tools/
-    webSearch.ts       # example tool scaffolded by init — add your own here
-  auth/
-    getUserId.ts       # auth adapter — return the current user's ID (added when auth is configured)
-  skills/              # knowledge documents the agent reads on demand (you create these)
-  blocks/              # custom React components rendered inline in chat for specific tools (you create these)
-
-agent.config.json      # central config file — model, tools, skills, blocks, auth, prompts
-instrumentation.ts     # re-exports the gluon worker registration; Next.js runs this on startup
-[app]/api/gluon-ai/
-  [[...path]]/
-    route.ts           # single catch-all route that handles all agent API traffic
-```
-
-**`agent/tools/`** is where you define what the agent can do. Each tool is a TypeScript file that exports a `defineTool()` call with a description, input schema, and execute function. Scaffold new ones with `npx gluon-ai add-tool <name>`.
-
-**`agent/skills/`** is for knowledge documents: Markdown files the agent can pull in on demand to handle specific tasks or domains. Scaffold new ones with `npx gluon-ai add-skill <name>`.
-
-**`agent/blocks/`** is for custom UI. When a tool runs, you can render a React component inline in the chat stream instead of plain text output. Drop your components here and register them in `agent.config.json`.
-
-**`agent.config.json`** is the single source of truth for everything agent-related. You point it at your tools, skills, and blocks by file path, and the package resolves them at runtime.
-
-Then start your dev server; the background worker starts automatically:
 
 ```bash
 npm run dev
 ```
 
----
-
-## Uninstall
-
-```bash
-npm run gluon:uninstall
-```
-
-Removes all scaffolded files, strips patches from `next.config` and `instrumentation.ts`, and uninstalls the package. Prompts before doing anything.
-
-> **Note:** The agent database tables (`gluon_chat`, `gluon_chat_job_run`) are not dropped automatically. Remove them manually if needed:
->
-> ```sql
-> DROP TABLE "gluon_chat_job_run", "gluon_chat";
-> ```
-
----
-
-## How to Use
-
-### 1. Add the UI
-
-Wrap your root layout with `AgentProvider`, then drop `AgentPanel` wherever you want the chat to appear:
+Drop in the packaged panel:
 
 ```tsx
-// app/layout.tsx
-import { AgentProvider } from "gluon-ai/react";
+"use client";
+import { GluonAgentPanel } from "gluon-ai/react";
 
-export default function RootLayout({ children }) {
+export default function Page() {
+  return <GluonAgentPanel darkMode frostedGlass />;
+}
+```
+
+That's enough for a working agent with web search, multi-chat, streaming, and the background worker.
+
+---
+
+## What init scaffolds
+
+| Path | Purpose |
+| ---- | ------- |
+| `agent.config.json` | Model, tools, auth, prompts, env remaps |
+| `agent/system-prompt.md` | Default system prompt (edit this freely) |
+| `agent/tools/webSearch.ts` | Example tool (OpenAI web search) |
+| `agent/context/datetime.ts` | Example context provider (current date/time) |
+| `[app\|src/app]/api/gluon-ai/[[...path]]/route.ts` | Catch-all API route |
+| `instrumentation.ts` | Starts the BullMQ worker on Next.js boot |
+
+Also:
+
+- Patches `next.config` with `serverExternalPackages: ["gluon-ai"]`
+- Adds `gluon:uninstall` to your `package.json` scripts
+- Creates agent tables (`gluon_chat`, `gluon_chat_job_run`) with idempotent SQL — your existing Prisma schema is never modified
+
+```
+agent/
+  system-prompt.md
+  tools/
+    webSearch.ts
+  context/
+    datetime.ts
+  skills/          # you create these (npx gluon-ai add-skill)
+  blocks/          # you create these (action block components)
+
+agent.config.json
+instrumentation.ts
+[app]/api/gluon-ai/[[...path]]/route.ts
+```
+
+> **Local package development:** if you're linking a `file:` copy of gluon into an app and Turbopack can't resolve subpath exports, use `npx gluon-ai init --default --development` (or `npx gluon-ai install --development`). That reinstalls with `--install-links` so deps are copied into `node_modules` instead of symlinked.
+
+---
+
+## Frontend — three ways to use the UI
+
+Everything lives under `gluon-ai/react`. Pick the layer that matches how much control you want.
+
+### 1. Drop-in — `GluonAgentPanel` (recommended)
+
+Provider + top bar + messages + input, with built-in styles.
+
+```tsx
+import { GluonAgentPanel } from "gluon-ai/react";
+
+<GluonAgentPanel
+  basePath="/api/gluon-ai"   // default
+  darkMode
+  frostedGlass
+  // suggestedPrompts={["…"]}  // optional; otherwise loaded from GET {basePath}/config
+  // actionBlocks={{ my_tool: MyToolBlock }}
+  // topBar={{ showChatHistory: true }}
+  // messageList={{ autoScroll: true }}
+  // inputBar={{ placeholder: "Ask anything…" }}
+/>
+```
+
+Useful props: `darkMode`, `frostedGlass`, `basePath`, `actionBlocks`, `suggestedPrompts`, `style` / `className`, and nested `topBar` / `messageList` / `inputBar` overrides. Pass `children` to replace the default body while keeping `AgentProvider`.
+
+### 2. Compose — Layer 2 pieces
+
+Same styled pieces, assembled yourself inside `AgentProvider`:
+
+```tsx
+import {
+  AgentProvider,
+  ChatTopBar,
+  ChatMessageList,
+  ChatInputBar,
+} from "gluon-ai/react";
+
+export function AgentSidebar() {
   return (
-    <html>
-      <body>
-        <AgentProvider basePath="/api/gluon-ai">{children}</AgentProvider>
-      </body>
-    </html>
+    <AgentProvider basePath="/api/gluon-ai">
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <ChatTopBar />
+        <ChatMessageList autoScroll />
+        <ChatInputBar placeholder="Ask anything…" />
+      </div>
+    </AgentProvider>
   );
 }
 ```
 
-```tsx
-// any page or component
-import { AgentPanel } from "gluon-ai/react";
+Each Layer 2 component reads from context — no data props required.
 
-export default function Page() {
-  return <AgentPanel />;
-}
+### 3. Headless — `AgentPanel`
+
+Structural slots only (`data-slot` attributes), no built-in CSS. Full control over look and feel:
+
+```tsx
+import { AgentProvider, AgentPanel } from "gluon-ai/react";
+
+<AgentProvider basePath="/api/gluon-ai">
+  <AgentPanel />
+</AgentProvider>
 ```
 
-Drop `<AgentPanel />` anywhere inside `<AgentProvider>` and style it however you want — it renders structural slots (`data-slot` attributes) with no built-in CSS, so layout is entirely up to you.
+Style via your own CSS targeting `[data-slot="…"]`, or pass `classNames` / `styles` / render props (`renderHeader`, `renderSidebar`, `messageComponents`, …).
+
+### Other exports
+
+Hooks (`useAgentContext`, `useAgentAdapter`, `useChatInput`, `useChatList`, `useAttachments`, …), message primitives (`MessageList`, `UserMessage`, `AssistantMessage`, `ThoughtWindow`, …), and headless buttons (`SendButton`, `StopButton`, `AttachButton`, …) are all available from `gluon-ai/react` when you want a fully custom shell.
 
 ---
 
-### 2. Configure the agent (`agent.config.json`)
+## Configure the agent (`agent.config.json`)
 
 ```json
 {
@@ -160,10 +183,15 @@ Drop `<AgentPanel />` anywhere inside `<AgentProvider>` and style it however you
   },
   "actionBlocks": {},
   "skills": [],
+  "context": ["./agent/context/datetime.ts"],
   "auth": {
     "handler": "allow"
   },
-  "suggestedPrompts": ["What can you help me with?"],
+  "sendReasoning": false,
+  "suggestedPrompts": [
+    "What's happening in the news today?",
+    "Search for the latest on AI models"
+  ],
   "env": {
     "openaiApiKey": "OPENAI_API_KEY",
     "databaseUrl": "AGENT_DATABASE_URL",
@@ -172,19 +200,30 @@ Drop `<AgentPanel />` anywhere inside `<AgentProvider>` and style it however you
 }
 ```
 
+| Field | What it does |
+| ----- | ------------ |
+| `systemPrompt` | Inline string **or** path to a `.md` / `.txt` file |
+| `tools` | Map of tool name → `defineTool` module path |
+| `skills` | Markdown docs the agent can load via built-in `read_skill` |
+| `context` | Providers called fresh every request; injected under `## Context` |
+| `actionBlocks` | Tool name → React component path for in-stream UI cards |
+| `auth.handler` | `"allow"` \| `"deny"` \| path to a custom handler |
+| `hooks` | Path exporting optional `onRunStart` / `onRunEnd` / `onRunError` |
+| `db.provider` / `db.adapter` | Built-in Prisma provider, or a custom DB adapter path |
+| `suggestedPrompts` | Empty-state chips (also served from `GET …/config`) |
+| `env.*` | Remap env var **names** if yours differ from the defaults |
+
 Full schema: [`packages/core/agent.config.schema.json`](packages/core/agent.config.schema.json)
 
 ---
 
-### 3. Add tools
-
-Scaffold a new tool interactively:
+## Tools
 
 ```bash
 npx gluon-ai add-tool my_tool
 ```
 
-Or write one manually:
+Or write one by hand:
 
 ```typescript
 // agent/tools/myTool.ts
@@ -200,98 +239,108 @@ export default defineTool({
   execute: async ({ query }) => {
     return { result: `Processed: ${query}` };
   },
-  needsApproval: false, // set true to require user confirmation before running
+  needsApproval: false, // true → user must confirm before execute
+  ui: {
+    executingLabel: "Working…",
+    completedLabel: "Done",
+  },
 });
 ```
 
-Register it in `agent.config.json`:
+Register in config:
 
 ```json
-{
-  "tools": {
-    "my_tool": "./agent/tools/myTool.ts"
-  }
-}
+{ "tools": { "my_tool": "./agent/tools/myTool.ts" } }
 ```
+
+Built-in tools (not listed in config): `discover_tools`, `request_confirmation`, and `read_skill` when skills are configured.
 
 ---
 
-### 4. Add skills (knowledge documents)
+## Skills
 
-Skills are Markdown files the agent can read on demand to get domain-specific guidance:
+Markdown knowledge the agent pulls in on demand:
 
 ```bash
 npx gluon-ai add-skill how-to-search
 ```
 
-Registers the file and adds it to `agent.config.json`. Write your instructions inside the generated `.md` file.
+Writes `agent/skills/how-to-search.md` and appends it to `skills` in `agent.config.json`.
 
 ---
 
-### 5. Auth
+## Context providers
 
-By default, `auth.handler` is set to `"allow"` (no authentication, good for local dev). For production, swap in a handler that returns the current user's ID:
+Dynamic strings injected into the system prompt on every request (date/time, user state, env, …):
 
 ```typescript
-// agent/auth/getUserId.ts
-import { auth } from "@/auth"; // next-auth, clerk, whatever you use
-
-export async function getUserId(req: Request): Promise<string | null> {
-  const session = await auth();
-  return session?.user?.id ?? null;
+// agent/context/datetime.ts
+export default async function (): Promise<string> {
+  return `Current date and time: ${new Date().toLocaleString()}`;
 }
 ```
 
-Then point `agent.config.json` to it:
-
 ```json
-{
-  "auth": {
-    "getUserId": "./agent/auth/getUserId.ts"
-  }
-}
+{ "context": ["./agent/context/datetime.ts"] }
 ```
 
 ---
 
-### 6. Custom in-stream UI (Action Blocks)
+## Auth
 
-Render a React component inline in the chat when a specific tool runs:
+Default is `"allow"` (every request is user `"anon"` — fine for local / single-user).
+
+For production, point `auth.handler` at a module that **default-exports** an async function:
+
+```typescript
+// agent/auth.ts
+import { auth } from "@/auth";
+
+export default async function (req: Request): Promise<string | boolean | null> {
+  const session = await auth();
+  return session?.user?.id ?? null; // string → allow as that userId; null → 401
+}
+```
+
+```json
+{ "auth": { "handler": "./agent/auth.ts" } }
+```
+
+Return values: `string` (userId), `true` (`"anon"`), `false` / `null` (401).
+
+---
+
+## Action blocks (in-stream UI)
 
 ```tsx
 // agent/blocks/MyToolBlock.tsx
 "use client";
 import type { ActionBlockProps } from "gluon-ai";
 
-export default function MyToolBlock({
-  toolInput,
-  toolOutput,
-}: ActionBlockProps) {
+export default function MyToolBlock({ toolInput, toolOutput }: ActionBlockProps) {
   return <div>Result: {JSON.stringify(toolOutput)}</div>;
 }
 ```
-
-Register it in `agent.config.json` and pass it to `AgentProvider`:
 
 ```json
 { "actionBlocks": { "my_tool": "./agent/blocks/MyToolBlock.tsx" } }
 ```
 
-```tsx
-import MyToolBlock from "./agent/blocks/MyToolBlock";
+Pass the component into the provider / panel (client bundle can't load the path alone):
 
-<AgentProvider actionBlocks={{ my_tool: MyToolBlock }}>
+```tsx
+import MyToolBlock from "@/agent/blocks/MyToolBlock";
+
+<GluonAgentPanel actionBlocks={{ my_tool: MyToolBlock }} />
+// or
+<AgentProvider actionBlocks={{ my_tool: MyToolBlock }}>…</AgentProvider>
 ```
 
 ---
 
-### 7. Track token consumption
+## Token usage
 
-Every completed run reports how many tokens were consumed. There are two places to read this, depending on where you need it.
-
-**Server-side — `onRunEnd` hook**
-
-Export `onRunEnd` from `agent/hooks.ts` (create the file if it doesn't exist and register it in `agent.config.json` under `"hooks": "./agent/hooks.ts"`). The context now includes a `usage` object:
+**Server** — register hooks in config (`"hooks": "./agent/hooks.ts"`):
 
 ```typescript
 // agent/hooks.ts
@@ -303,19 +352,13 @@ export async function onRunEnd(ctx: {
   finishReason: string;
   usage: TokenUsage; // { promptTokens, completionTokens, totalTokens }
 }): Promise<void> {
-  console.log(
-    `[${ctx.userId}] run finished — ${ctx.usage.totalTokens} tokens ` +
-    `(${ctx.usage.promptTokens} in / ${ctx.usage.completionTokens} out)`
-  );
-  // persist to your own DB, charge the user, send to an analytics endpoint, etc.
+  // persist, bill, analytics, …
 }
 ```
 
-Tokens are accumulated across all tool-call rounds in the run, so `totalTokens` reflects the full conversation turn.
+Tokens are summed across all tool rounds in the run.
 
-**Client-side — `adapter.lastRunUsage`**
-
-The `AgentSessionAdapter` exposes `lastRunUsage: TokenUsage | null`. It is set when a run completes and reset to `null` when the next run starts:
+**Client** — `adapter.lastRunUsage` via `useAgentContext()`:
 
 ```tsx
 "use client";
@@ -324,11 +367,11 @@ import { useAgentContext } from "gluon-ai/react";
 export function TokenCounter() {
   const { adapter } = useAgentContext();
   const usage = adapter.lastRunUsage;
-
   if (!usage) return null;
   return (
     <p>
-      Last run: {usage.totalTokens} tokens ({usage.promptTokens} in / {usage.completionTokens} out)
+      Last run: {usage.totalTokens} tokens
+      ({usage.promptTokens} in / {usage.completionTokens} out)
     </p>
   );
 }
@@ -336,12 +379,57 @@ export function TokenCounter() {
 
 ---
 
-## Currently Working On
+## CLI reference
 
-- **Framework portability**: refactoring internals to better isolate Next.js-specific concerns, laying groundwork for supporting other framework-based web apps
-- **UI improvements**: pre-packaging more polished, ready-to-use chat UI components to reduce the amount of styling work needed on the consumer side
-- **Setup experience**: exploring a web-based setup flow to replace the CLI wizard with something more visual and intuitive
-- **Stability**: fixing bugs, adding unit tests, improving edge case handling across DB providers
+```text
+npx gluon-ai <command>
+```
+
+| Command | Flags | Description |
+| ------- | ----- | ----------- |
+| `init [dir]` | `--default` / `-y`, `--development` / `--dev` | Scan project, scaffold files, generate Prisma client, create agent tables, patch next.config |
+| `install [dir]` | `--development` / `--dev` | Run install; `--development` uses `--install-links` for local `file:` packages |
+| `add-tool [name]` | | Scaffold `agent/tools/<name>.ts` + register in config |
+| `add-skill [name]` | | Scaffold `agent/skills/<name>.md` + register in config |
+| `uninstall [dir]` | interactive confirm | Remove scaffolded files, strip patches, uninstall the package |
+| `--help` / `-h` | | Print help |
+
+Uninstall does **not** drop DB tables. Remove them yourself if needed:
+
+```sql
+DROP TABLE "gluon_chat_job_run", "gluon_chat";
+```
+
+Convenience script after init:
+
+```bash
+npm run gluon:uninstall
+```
+
+---
+
+## Package exports
+
+| Import | Use for |
+| ------ | ------- |
+| `gluon-ai` | `defineTool`, shared types (`ActionBlockProps`, `TokenUsage`, …) |
+| `gluon-ai/react` | Provider, panels, hooks, message/input primitives |
+| `gluon-ai/routes` | Catch-all `GET` / `POST` / `DELETE` handlers |
+| `gluon-ai/tool` | Tool helpers / types |
+| `gluon-ai/server` | Commands, queue, Redis, DB adapter types |
+| `gluon-ai/instrumentation` | `register()` — starts the worker |
+| `gluon-ai/cli` | CLI command implementations (used by the `gluon-ai` bin) |
+
+API surface under the catch-all (last path segment): `events`, `thread`, `chats`, `commands`, `config`.
+
+---
+
+## Currently working on
+
+- Framework portability beyond Next.js
+- More polished default UI affordances
+- Setup UX (possibly a visual wizard)
+- Stability, tests, and multi-DB edge cases
 
 ---
 
