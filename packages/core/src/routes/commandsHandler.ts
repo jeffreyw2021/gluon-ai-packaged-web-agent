@@ -32,6 +32,7 @@ export function createCommandsHandler(_opts?: HandlerOptions) {
           reason?: string;
           toolCallId?: string;
           output?: unknown;
+          sendReasoning?: boolean;
         };
 
         // For "send": auto-create chat if chatId not provided or not found
@@ -55,7 +56,7 @@ export function createCommandsHandler(_opts?: HandlerOptions) {
             chatId,
             clientMessageId: body.clientMessageId ?? generateId(),
             message: msg,
-          }, { sendReasoning: config.raw.sendReasoning });
+          }, { sendReasoning: body.sendReasoning ?? config.raw.sendReasoning });
 
           return Response.json(result, { status: 202 });
         }

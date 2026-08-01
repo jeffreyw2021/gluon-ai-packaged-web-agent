@@ -18,7 +18,9 @@ Built for myself. Shared in case it's useful.
 | React 19+ | |
 | PostgreSQL | Best supported. MySQL / SQLite available via init; less battle-tested |
 | Redis | Required for the BullMQ worker + live events |
-| OpenAI API | Only provider supported right now |
+| **Any gateway model** | Powered by [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) — OpenAI, Anthropic, Google, xAI, DeepSeek, and more |
+
+One `VERCEL_AI_GATEWAY_API_KEY` unlocks every supported provider; a plain `OPENAI_API_KEY` also works as a fallback.
 
 ---
 
@@ -28,12 +30,15 @@ Built for myself. Shared in case it's useful.
 npm install gluon-ai@beta
 ```
 
-> **Package manager:** npm is the supported path for host apps right now. pnpm can install the package, but init / Prisma generate / local `file:` linking (`--development`) are npm-first and often break under pnpm’s store layout. Use npm for consumer projects until that’s fixed.
+> **Package manager:** npm is the supported path for host apps right now. pnpm can install the package, but init / Prisma generate / local `file:` linking (`--development`) are npm-first and often break under pnpm's store layout. Use npm for consumer projects until that's fixed.
 
 Put secrets in `.env` / `.env.local` **before** init (the wizard detects existing names):
 
 ```env
-OPENAI_API_KEY=sk-...
+# Pick one:
+VERCEL_AI_GATEWAY_API_KEY=...   # preferred — unlocks all providers
+OPENAI_API_KEY=sk-...            # fallback (also needed for OpenAI web_search tool)
+
 AGENT_DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
 REDIS_URL=redis://localhost:6379
 ```
@@ -218,7 +223,8 @@ Layer 2 components (`ChatTopBar`, `ChatMessageList`, `ChatInputBar`) and `GluonA
 
 ```json
 {
-  "model": "gpt-4o",
+  "model": "openai/gpt-4o",
+  "reasoningModel": "openai/o4-mini",
   "systemPrompt": "./agent/system-prompt.md",
   "maxOutputTokens": 16384,
   "maxRounds": 25,
@@ -237,6 +243,7 @@ Layer 2 components (`ChatTopBar`, `ChatMessageList`, `ChatInputBar`) and `GluonA
     "Search for the latest on AI models"
   ],
   "env": {
+    "gatewayApiKey": "VERCEL_AI_GATEWAY_API_KEY",
     "openaiApiKey": "OPENAI_API_KEY",
     "databaseUrl": "AGENT_DATABASE_URL",
     "redisUrl": "REDIS_URL"
@@ -246,6 +253,8 @@ Layer 2 components (`ChatTopBar`, `ChatMessageList`, `ChatInputBar`) and `GluonA
 
 | Field | What it does |
 | ----- | ------------ |
+| `model` | Model in `provider/model` format. Bare ids like `gpt-4o` are auto-normalized to `openai/gpt-4o` |
+| `reasoningModel` | Model to use in Think mode (`sendReasoning: true`). Must be reasoning-capable (e.g. `openai/o4-mini`). Defaults to `model` |
 | `systemPrompt` | Inline string **or** path to a `.md` / `.txt` file |
 | `tools` | Map of tool name → `defineTool` module path |
 | `skills` | Markdown docs the agent can load via built-in `read_skill` |
@@ -253,11 +262,98 @@ Layer 2 components (`ChatTopBar`, `ChatMessageList`, `ChatInputBar`) and `GluonA
 | `actionBlocks` | Tool name → React component path for in-stream UI cards |
 | `auth.handler` | `"allow"` \| `"deny"` \| path to a custom handler |
 | `hooks` | Path exporting optional `onRunStart` / `onRunEnd` / `onRunError` |
+| `sendReasoning` | Server default for reasoning stream. Client can override per-message via Think mode |
 | `db.provider` / `db.adapter` | Built-in Prisma provider, or a custom DB adapter path |
 | `suggestedPrompts` | Empty-state chips (also served from `GET …/config`) |
 | `env.*` | Remap env var **names** if yours differ from the defaults |
 
 Full schema: [`packages/core/agent.config.schema.json`](packages/core/agent.config.schema.json)
+
+---
+
+## Models and providers
+
+Gluon routes all model calls through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway), giving you access to every provider it supports without any code changes.
+
+### Switching models
+
+Change `model` (and optionally `reasoningModel`) in `agent.config.json`, then restart:
+
+```json
+{ "model": "openai/gpt-4o" }
+{ "model": "anthropic/claude-sonnet-4.6" }
+{ "model": "google/gemini-2.0-flash" }
+{ "model": "xai/grok-3" }
+{ "model": "deepseek/deepseek-chat" }
+```
+
+The format is always `provider/model`. Bare ids (e.g. `gpt-4o`) fall back to `openai/` for backward compatibility.
+
+For Think mode (chain-of-thought reasoning), also set a reasoning-capable model:
+
+```json
+{
+  "model": "openai/gpt-4o",
+  "reasoningModel": "openai/o4-mini"
+}
+```
+
+See the [Vercel AI Gateway model catalog](https://vercel.com/docs/ai-gateway) for the full list of supported provider/model strings.
+
+### Adding a new model or provider
+
+**A. Model already on the Gateway (usual path)**
+
+No gluon code changes needed. Enable the model/provider in your Vercel AI Gateway account, put the gateway `provider/model` string in `agent.config.json`, and make sure your `VERCEL_AI_GATEWAY_API_KEY` has access.
+
+**B. Custom or self-hosted OpenAI-compatible endpoint**
+
+Point the gateway at your endpoint via an env var:
+
+```env
+AI_GATEWAY_URL=https://my-proxy.example.com/v1
+```
+
+Use whatever model id your proxy accepts in `agent.config.json`. The gateway client uses this base URL for all calls.
+
+**C. Direct `@ai-sdk/<provider>` integration (advanced)**
+
+If you need a provider that isn't available through the gateway, you can extend `resolveModel.ts` to branch on the `provider` prefix and return a direct `@ai-sdk/<provider>` model instance. Add the optional dependency, then override the `default` case:
+
+```typescript
+// packages/core/src/server/model/resolveModel.ts (fork)
+import { createAnthropic } from "@ai-sdk/anthropic";
+
+export function getLanguageModel(modelId: string): LanguageModel {
+  const normalized = normalizeModelId(modelId);
+  const provider = modelProvider(normalized);
+  if (provider === "anthropic-direct") {
+    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    return anthropic(normalized.slice("anthropic-direct/".length));
+  }
+  return getAiGateway()(normalized) as LanguageModel;
+}
+```
+
+Gateway remains the preferred path for new providers — the direct route requires forking.
+
+**D. Provider-specific tools** (e.g. OpenAI web search)
+
+Tools that call a vendor SDK directly (like `webSearch.ts` using `@ai-sdk/openai` Responses API) stay provider-specific by design. They need that vendor's key even if the main agent uses a different model via Gateway. This is documented in the scaffolded tool file.
+
+### Reasoning / Think mode
+
+When the user selects **Think** in the UI (`useReasoningMode`), the client sends `sendReasoning: true`. The agent then:
+
+1. Switches to `reasoningModel` (if configured) — this should be an o-series or other reasoning-capable model
+2. Streams reasoning tokens live to `ThoughtWindow` as the model thinks
+3. Persists the reasoning alongside the message
+
+| Mode | What happens |
+| ---- | ------------ |
+| Simple | No reasoning stream, tools-only ThoughtWindow |
+| Auto | Uses `sendReasoning` from `agent.config.json` |
+| Think | Forces `sendReasoning: true`, uses `reasoningModel` |
 
 ---
 

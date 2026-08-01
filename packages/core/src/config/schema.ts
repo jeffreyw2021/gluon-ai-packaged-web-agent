@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const AgentConfigSchema = z.object({
-  model: z.string().default("gpt-4o"),
+  model: z.string().default("openai/gpt-4o"),
 
   // Prefer a path to agent/system-prompt.md (scaffolded by `gluon-ai init`).
   // Inline strings are also supported for simple setups.
@@ -58,10 +58,28 @@ export const AgentConfigSchema = z.object({
 
   sendReasoning: z.boolean().default(false),
 
+  /**
+   * Model to use when "Think" mode is requested (sendReasoning: true).
+   * Must be a reasoning-capable model, e.g. "openai/o4-mini" or "openai/o3".
+   * When omitted, the main `model` is used for all modes.
+   * Format: "provider/model" (see gateway catalog at https://vercel.com/docs/ai-gateway).
+   */
+  reasoningModel: z.string().optional(),
+
   suggestedPrompts: z.array(z.string()).optional().default([]),
 
   env: z
     .object({
+      /**
+       * Env var name that holds the Vercel AI Gateway API key.
+       * Defaults to VERCEL_AI_GATEWAY_API_KEY.
+       * Falls back to openaiApiKey if not set.
+       */
+      gatewayApiKey: z.string().default("VERCEL_AI_GATEWAY_API_KEY"),
+      /**
+       * Env var name that holds the OpenAI API key (legacy fallback).
+       * Still used by provider-specific scaffolds (e.g. OpenAI web_search tool).
+       */
       openaiApiKey: z.string().default("OPENAI_API_KEY"),
       databaseUrl: z.string().default("AGENT_DATABASE_URL"),
       redisUrl: z.string().default("REDIS_URL"),

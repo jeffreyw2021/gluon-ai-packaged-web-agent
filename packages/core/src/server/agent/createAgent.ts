@@ -1,9 +1,9 @@
 
 import { ToolLoopAgent, stepCountIs, tool } from "ai";
-import type { ToolSet } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
+import type { LanguageModel, ToolSet } from "ai";
 import { z } from "zod";
 import type { LoadedConfig } from "../../config/loader";
+import { getLanguageModel, modelProvider, normalizeModelId } from "../model/resolveModel";
 import { requestConfirmation } from "./tools/requestConfirmation";
 import { createReadSkillTool } from "./tools/readSkill";
 import { createDiscoverToolsTool } from "./tools/discoverTools";
@@ -35,7 +35,29 @@ function buildSystemPrompt(config: LoadedConfig, contextParts: string[]): string
   return prompt;
 }
 
-export async function createAgent(config: LoadedConfig) {
+export interface CreateAgentOptions {
+  /** When true, select the reasoningModel (if configured) and enable reasoning. */
+  sendReasoning?: boolean;
+}
+
+/**
+ * Build provider options for the given model.
+ * For OpenAI reasoning models (o-series), set parallelToolCalls: false
+ * and optionally a reasoning effort level.
+ */
+function buildProviderOptions(normalizedModelId: string, sendReasoning: boolean): Record<string, Record<string, string | number | boolean | null>> | undefined {
+  const provider = modelProvider(normalizedModelId);
+  if (provider === "openai") {
+    const base: Record<string, string | number | boolean | null> = { parallelToolCalls: false };
+    if (sendReasoning) {
+      base.reasoningEffort = "medium";
+    }
+    return { openai: base };
+  }
+  return undefined;
+}
+
+export async function createAgent(config: LoadedConfig, opts: CreateAgentOptions = {}) {
   // Call context providers fresh on every request so dynamic values (e.g.
   // current date/time) are always up to date.
   const contextParts: string[] = [];
@@ -52,8 +74,6 @@ export async function createAgent(config: LoadedConfig) {
 
   tools["request_confirmation"] = requestConfirmation;
 
-  // Always inject discover_tools when the config has at least one custom tool.
-  // It is an internal tool — never visible in agent.config.json.
   if (Object.keys(config.tools).length > 0) {
     tools["discover_tools"] = createDiscoverToolsTool(config.tools);
   }
@@ -69,20 +89,21 @@ export async function createAgent(config: LoadedConfig) {
       ...(def.needsApproval !== undefined
         ? { needsApproval: def.needsApproval as (input: unknown) => boolean }
         : {}),
-      execute: async (input, opts) => def.execute(input, opts),
+      execute: async (input, execOpts) => def.execute(input, execOpts),
     });
   }
 
-  const modelId = config.raw.model;
-  const openaiApiKey = process.env[config.raw.env?.openaiApiKey ?? "OPENAI_API_KEY"];
-  if (!openaiApiKey) {
-    throw new Error(
-      `OpenAI API key env var ${config.raw.env?.openaiApiKey ?? "OPENAI_API_KEY"} is not set`,
-    );
-  }
+  // When sendReasoning is requested, prefer the dedicated reasoningModel (if
+  // configured). Fall back to the main model so callers never get undefined.
+  const sendReasoning = opts.sendReasoning ?? false;
+  const rawModelId =
+    sendReasoning && config.raw.reasoningModel
+      ? config.raw.reasoningModel
+      : config.raw.model;
 
-  const openaiProvider = createOpenAI({ apiKey: openaiApiKey });
-  const model = openaiProvider(modelId);
+  const normalizedId = normalizeModelId(rawModelId);
+  const model: LanguageModel = getLanguageModel(normalizedId);
+  const providerOptions = buildProviderOptions(normalizedId, sendReasoning);
 
   return new ToolLoopAgent({
     model,
@@ -91,10 +112,6 @@ export async function createAgent(config: LoadedConfig) {
     tools,
     maxOutputTokens: config.raw.maxOutputTokens,
     stopWhen: stepCountIs(config.raw.maxRounds),
-    providerOptions: {
-      openai: {
-        parallelToolCalls: false,
-      },
-    },
+    ...(providerOptions ? { providerOptions } : {}),
   });
 }

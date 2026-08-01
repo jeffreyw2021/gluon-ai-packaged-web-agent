@@ -130,10 +130,12 @@ function scanProject(root: string): ScanResult {
 // ── Interactive prompts ────────────────────────────────────────────────────
 
 interface Answers {
+  gatewayApiKey: string;
   openaiKeyVar: string;
   databaseUrlVar: string;
   redisUrlVar: string;
   model: string;
+  reasoningModel: string;
   systemPrompt: string;
   apiBasePath: string;
   dbMode: "prisma" | "custom";
@@ -143,6 +145,9 @@ interface Answers {
 
 function buildDefaults(scan: ScanResult): Answers {
   return {
+    gatewayApiKey: scan.detectedEnvVars.has("VERCEL_AI_GATEWAY_API_KEY")
+      ? "VERCEL_AI_GATEWAY_API_KEY"
+      : "VERCEL_AI_GATEWAY_API_KEY",
     openaiKeyVar: scan.detectedEnvVars.has("OPENAI_API_KEY")
       ? "OPENAI_API_KEY"
       : ([...scan.detectedEnvVars.keys()].find((k) => k.includes("OPENAI")) ??
@@ -157,9 +162,8 @@ function buildDefaults(scan: ScanResult): Answers {
       : ([...scan.detectedEnvVars.keys()].find(
           (k) => k.includes("REDIS") || k.includes("UPSTASH"),
         ) ?? "REDIS_URL"),
-    model: "gpt-4o",
-    // Points at the markdown file scaffolded by init — easier to edit than
-    // an inline JSON string, and keeps a richer default prompt out of agent.config.json.
+    model: "openai/gpt-4o",
+    reasoningModel: "openai/o4-mini",
     systemPrompt: "./agent/system-prompt.md",
     apiBasePath: "/api/gluon-ai",
     dbMode: "prisma",
@@ -198,12 +202,14 @@ async function askQuestions(
 
   if (useDefaults) {
     console.log("  Using all defaults (--default flag set):\n");
-    console.log(`    OpenAI key var : ${defaults.openaiKeyVar}`);
-    console.log(`    Database URL   : ${defaults.databaseUrlVar}`);
-    console.log(`    Redis URL      : ${defaults.redisUrlVar}`);
-    console.log(`    Model          : ${defaults.model}`);
-    console.log(`    System prompt  : ${defaults.systemPrompt}`);
-    console.log(`    API base path  : ${defaults.apiBasePath}\n`);
+    console.log(`    Gateway key var : ${defaults.gatewayApiKey}`);
+    console.log(`    OpenAI key var  : ${defaults.openaiKeyVar}`);
+    console.log(`    Database URL    : ${defaults.databaseUrlVar}`);
+    console.log(`    Redis URL       : ${defaults.redisUrlVar}`);
+    console.log(`    Model           : ${defaults.model}`);
+    console.log(`    Reasoning model : ${defaults.reasoningModel}`);
+    console.log(`    System prompt   : ${defaults.systemPrompt}`);
+    console.log(`    API base path   : ${defaults.apiBasePath}\n`);
     return defaults;
   }
 
@@ -224,8 +230,12 @@ async function askQuestions(
       "  type the correct name. Otherwise press Enter to accept.\n",
   );
 
+  const gatewayApiKey = await prompt(
+    "AI Gateway API key env var name (VERCEL_AI_GATEWAY_API_KEY or fallback OPENAI_API_KEY)",
+    defaults.gatewayApiKey,
+  );
   const openaiKeyVar = await prompt(
-    "OpenAI API key env var name",
+    "OpenAI API key env var name (for OpenAI-specific tools, e.g. web_search)",
     defaults.openaiKeyVar,
   );
   const databaseUrlVar = await prompt(
@@ -241,8 +251,13 @@ async function askQuestions(
     "\n  ── Agent configuration ─────────────────────────────────────\n",
   );
   console.log("  Press Enter to accept the value shown in [brackets].\n");
+  console.log(
+    "  Model format: provider/model (e.g. openai/gpt-4o, anthropic/claude-sonnet-4.6,\n" +
+    "  google/gemini-2.0-flash). See https://vercel.com/docs/ai-gateway for the full catalog.\n",
+  );
 
-  const model = await prompt("OpenAI model to use", defaults.model);
+  const model = await prompt("Model to use", defaults.model);
+  const reasoningModel = await prompt("Reasoning model for Think mode (optional)", defaults.reasoningModel);
   const systemPrompt = await prompt("System prompt", defaults.systemPrompt);
   const apiBasePath = await prompt("API route base path", defaults.apiBasePath);
 
@@ -280,10 +295,12 @@ async function askQuestions(
   rl.close();
 
   return {
+    gatewayApiKey,
     openaiKeyVar,
     databaseUrlVar,
     redisUrlVar,
     model,
+    reasoningModel,
     systemPrompt,
     apiBasePath,
     dbMode,
@@ -577,6 +594,7 @@ function applyNextConfig(root: string) {
 function configTemplate(answers: Answers): string {
   const cfg: Record<string, unknown> = {
     model: answers.model,
+    reasoningModel: answers.reasoningModel,
     systemPrompt: answers.systemPrompt,
     maxOutputTokens: 16384,
     maxRounds: 25,
@@ -585,15 +603,8 @@ function configTemplate(answers: Answers): string {
     },
     actionBlocks: {},
     skills: [],
-    // Each entry is a relative path to a .ts file that exports a default
-    // async function () => Promise<string>.  Gluon calls it fresh on every
-    // request and injects the result into the system prompt under ## Context.
-    // Remove or add entries to control what dynamic context the agent receives.
     context: ["./agent/context/datetime.ts"],
     auth: {
-      // "allow" (default) — all requests pass, userId = "anon". Good for dev / single-user.
-      // "deny"            — all requests rejected with 401.
-      // "./agent/auth.ts" — custom file: export default async (req) => "userId" | true | false
       handler: "allow",
     },
     sendReasoning: false,
@@ -603,6 +614,7 @@ function configTemplate(answers: Answers): string {
       "Summarize recent developments in technology",
     ],
     env: {
+      gatewayApiKey: answers.gatewayApiKey,
       openaiApiKey: answers.openaiKeyVar,
       databaseUrl: answers.databaseUrlVar,
       redisUrl: answers.redisUrlVar,
@@ -964,9 +976,13 @@ export async function initCommand(
 
   1. Add your secrets to .env.local (or your platform env):
 
-       ${answers.openaiKeyVar}=sk-...
+       ${answers.gatewayApiKey}=<your-vercel-ai-gateway-key>
+       OPENAI_API_KEY=sk-...   ← fallback & OpenAI-specific tools
        ${answers.databaseUrlVar}=postgresql://...   ← agent tables DB connection
        ${answers.redisUrlVar}=redis://...
+
+     Gateway key: https://vercel.com/docs/ai-gateway
+     (OPENAI_API_KEY alone also works — it's used as a gateway fallback.)
 
   2. The agent tables (gluon_chat, gluon_chat_job_run) are managed entirely
      by the package — your project's prisma/schema.prisma is untouched.
@@ -989,7 +1005,15 @@ export async function initCommand(
          <AgentPanel />
        </AgentProvider>
 
-  5. Run \`npx gluon-ai add-tool <name>\` to scaffold new tools.
+  5. Switch models any time — just update agent.config.json:
+
+       "model": "anthropic/claude-sonnet-4.6"
+       "model": "google/gemini-2.0-flash"
+       "model": "openai/gpt-4o"
+
+     See https://vercel.com/docs/ai-gateway for the full provider catalog.
+
+  6. Run \`npx gluon-ai add-tool <name>\` to scaffold new tools.
 
   To uninstall later, run:
 
