@@ -430,11 +430,17 @@ If your key is stored under a different name, remap it in `env`:
 
 ## Tools
 
-```bash
-npx gluon-ai add-tool my_tool
-```
+### Default behaviour (no tools configured)
 
-Or write one by hand:
+Three built-in tools are always available, regardless of what you configure:
+
+| Tool | When it fires |
+| --- | --- |
+| `discover_tools` | Agent calls this automatically before using any custom tool for the first time to read descriptions and parameter signatures |
+| `request_confirmation` | Called when a tool has `needsApproval: true` — pauses the run and shows a confirmation card in the UI |
+| `read_skill` | Added automatically when `skills` is non-empty — lets the agent load a skill document on demand |
+
+### Defining a tool
 
 ```typescript
 // agent/tools/myTool.ts
@@ -450,21 +456,49 @@ export default defineTool({
   execute: async ({ query }) => {
     return { result: `Processed: ${query}` };
   },
-  needsApproval: false, // true → user must confirm before execute
+  needsApproval: false,
   ui: {
     executingLabel: "Working…",
     completedLabel: "Done",
+    icon: "Globe",
   },
 });
 ```
-
-Register in config:
 
 ```json
 { "tools": { "my_tool": "./agent/tools/myTool.ts" } }
 ```
 
-Built-in tools (not listed in config): `discover_tools`, `request_confirmation`, and `read_skill` when skills are configured.
+All `defineTool` fields:
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `description` | Yes | Shown to the model — describe what the tool does and when to use it |
+| `inputSchema` | Yes | Zod schema; the model must match it; used for TypeScript types in `execute` |
+| `execute` | Yes | Called with the validated input when the agent decides to invoke the tool |
+| `displayLabel` | No | Short human-readable name shown in the UI (e.g. "Web Search") |
+| `needsApproval` | No | `true` / `false` or a function `(input) => boolean` — see below |
+| `ui.executingLabel` | No | ThoughtWindow text while the tool is running (e.g. `"Searching…"`) |
+| `ui.completedLabel` | No | ThoughtWindow text after the tool finishes (e.g. `"Search done"`) |
+| `ui.icon` | No | Lucide icon name for the ThoughtWindow row (e.g. `"Globe"`, `"FileText"`) — defaults to `"Settings"` |
+
+### Human approval
+
+Set `needsApproval: true` (or a function that inspects the input and returns `true`) to pause the run before the tool executes. The user sees a confirmation card in the chat; if they approve the tool runs, if they reject the run stops.
+
+```typescript
+// Approve only for destructive-looking queries
+needsApproval: ({ query }) => query.toLowerCase().includes("delete"),
+```
+
+The `request_confirmation` built-in tool handles the pause/resume handshake automatically — you do not need to wire anything in the UI beyond rendering `ChatMessageList` or `MessageList` (which includes `ConfirmationBlock`).
+
+### Scaffolding with the CLI
+
+```bash
+npx gluon-ai add-tool my_tool
+# → writes agent/tools/my_tool.ts and adds it to agent.config.json
+```
 
 ---
 
@@ -472,13 +506,52 @@ Built-in tools (not listed in config): `discover_tools`, `request_confirmation`,
 
 ## Skills
 
-Markdown knowledge the agent pulls in on demand:
+### What skills are
+
+Skills are Markdown documents the agent **reads on demand** — they are never injected into every request's system prompt. When `skills` is non-empty, gluon adds a `read_skill` tool and instructs the agent to call it before using domain-specific tools. This keeps request context small while giving the agent access to deep documentation when it needs it.
+
+Typical uses: step-by-step procedures, domain glossaries, API cheat-sheets, policy documents.
+
+### Default behaviour (no skills configured)
+
+`read_skill` is not registered and no skill content is ever sent to the model.
+
+### Creating a skill
 
 ```bash
 npx gluon-ai add-skill how-to-search
+# → writes agent/skills/how-to-search.md and registers it in agent.config.json
 ```
 
-Writes `agent/skills/how-to-search.md` and appends it to `skills` in `agent.config.json`.
+Edit the generated file with whatever the agent should know. Plain Markdown — headings, code blocks, bullet lists all work:
+
+```markdown
+<!-- agent/skills/how-to-search.md -->
+# How to search the web
+
+Use the `web_search` tool with a concise query. Prefer recent date qualifiers
+when the topic is time-sensitive. Always cite the source URL in your response.
+
+## When NOT to search
+- The answer is in your training data and does not change (e.g. language syntax).
+- The user has already provided the source material inline.
+```
+
+```json
+{ "skills": ["./agent/skills/how-to-search.md"] }
+```
+
+At runtime the agent receives an index of available skills and their numbers. It calls `read_skill(index)` to fetch a document when it decides it's relevant.
+
+### Skills vs context providers
+
+| | Skills | Context providers |
+| --- | --- | --- |
+| When loaded | On demand by the agent (`read_skill`) | Every request, unconditionally |
+| Content type | Static Markdown docs, procedures, reference | Dynamic values: current time, user state, env data |
+| Token cost | Only when read | Always added to every system prompt |
+
+Use **skills** for large reference material that is only sometimes needed. Use **context providers** for small dynamic strings that should always be present.
 
 ---
 
@@ -486,7 +559,15 @@ Writes `agent/skills/how-to-search.md` and appends it to `skills` in `agent.conf
 
 ## Context providers
 
-Dynamic strings injected into the system prompt on every request (date/time, user state, env, …):
+### What context providers do
+
+A context provider is a plain async function that returns a string. Gluon calls every registered provider **fresh on every agent request** and appends the results to the system prompt under a `## Context` block. The agent always sees current values — no stale cache.
+
+### Default behaviour
+
+`init` scaffolds `agent/context/datetime.ts` which returns the current date and time. This keeps the agent temporally grounded without hardcoding anything in the system prompt.
+
+### Defining a context provider
 
 ```typescript
 // agent/context/datetime.ts
@@ -498,6 +579,38 @@ export default async function (): Promise<string> {
 ```json
 { "context": ["./agent/context/datetime.ts"] }
 ```
+
+The returned string is appended verbatim under `## Context` in the system prompt. Keep it short — it costs tokens on every request.
+
+### Multiple providers
+
+List any number of files; each one contributes a line to the `## Context` block:
+
+```json
+{
+  "context": [
+    "./agent/context/datetime.ts",
+    "./agent/context/userProfile.ts",
+    "./agent/context/featureFlags.ts"
+  ]
+}
+```
+
+### Accessing external data
+
+Context providers are regular async functions — you can fetch from your DB, call an API, or read environment variables:
+
+```typescript
+// agent/context/userProfile.ts
+import { db } from "@/lib/db";
+
+export default async function (): Promise<string> {
+  const user = await db.user.findFirst({ where: { email: process.env.DEV_USER_EMAIL } });
+  return user ? `Active user: ${user.name} (${user.plan} plan)` : "No user context available.";
+}
+```
+
+> **Note:** Context providers receive no request arguments and have no access to the calling user's session. For per-user dynamic context, use hooks or access user information through environment variables or a shared server-side session store. If you need the userId at request time, use tool handlers and pass context via closures instead.
 
 ---
 
@@ -541,7 +654,7 @@ export default async function (req: Request): Promise<string | boolean | null> {
 Once a userId is returned, Gluon:
 - **Scopes all chat sessions** to that userId — users only see their own chat history.
 - **Scopes all run records** to that userId — billing, rate-limiting, and logs are per-user.
-- Passes the userId to **context providers** and **tool handlers** via `req.gluon.userId` so your server-side code can make per-user decisions.
+- Passes the userId to **lifecycle hooks** (`onRunStart`, `onRunEnd`, `onRunError`) so you can record usage, enforce rate limits, or trigger billing per user.
 
 ### Role-based access
 
@@ -565,12 +678,24 @@ export default async function (req: Request) {
 
 ## Action blocks (in-stream UI)
 
+### What action blocks do
+
+An action block is a React component that replaces the default tool-row in the chat stream for a specific tool. By default, tool calls show a text row in the ThoughtWindow (using `ui.executingLabel` / `ui.completedLabel`). Register an action block to render a full UI card — a map, a data table, a preview — inside the message thread instead.
+
+### Default behaviour (no action blocks)
+
+Tool invocations appear as collapsible rows in the ThoughtWindow. No custom UI components are loaded.
+
+### Defining an action block
+
 ```tsx
 // agent/blocks/MyToolBlock.tsx
 "use client";
 import type { ActionBlockProps } from "gluon-ai";
 
-export default function MyToolBlock({ toolInput, toolOutput }: ActionBlockProps) {
+export default function MyToolBlock({ toolInput, toolOutput, state }: ActionBlockProps) {
+  const isRunning = state === "call";
+  if (isRunning) return <div>Running…</div>;
   return <div>Result: {JSON.stringify(toolOutput)}</div>;
 }
 ```
@@ -579,13 +704,27 @@ export default function MyToolBlock({ toolInput, toolOutput }: ActionBlockProps)
 { "actionBlocks": { "my_tool": "./agent/blocks/MyToolBlock.tsx" } }
 ```
 
-Pass the component into the provider / panel (client bundle can't load the path alone):
+All `ActionBlockProps` fields:
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `toolInput` | `unknown` | The validated input the agent passed to the tool |
+| `toolOutput` | `unknown` | The value returned by `execute` (undefined while the tool is still running) |
+| `toolName` | `string` | The registered tool name (e.g. `"my_tool"`) |
+| `messageId` | `string` | ID of the assistant message this block belongs to |
+| `state` | `"call"` \| `"result"` \| `"partial-call"` | Lifecycle state: `"call"` while running, `"result"` after |
+
+### Wiring the component to the client
+
+The config path is used for server-side loading only. The client bundle can't load TypeScript paths at runtime — you must pass the imported component explicitly:
 
 ```tsx
 import MyToolBlock from "@/agent/blocks/MyToolBlock";
 
+// Drop-in panel:
 <GluonAgentPanel actionBlocks={{ my_tool: MyToolBlock }} />
-// or
+
+// Or via AgentProvider directly:
 <AgentProvider actionBlocks={{ my_tool: MyToolBlock }}>…</AgentProvider>
 ```
 
@@ -593,13 +732,31 @@ import MyToolBlock from "@/agent/blocks/MyToolBlock";
 
 
 
-## Token usage
+## Token usage & lifecycle hooks
 
-**Server** — register hooks in config (`"hooks": "./agent/hooks.ts"`):
+### Default behaviour
+
+Token counts are tracked automatically on every run. No config needed to access them.
+
+### Server-side hooks
+
+Register a hooks file to run code at key points in the agent lifecycle. All hooks receive `userId` from your auth handler.
+
+```json
+{ "hooks": "./agent/hooks.ts" }
+```
 
 ```typescript
 // agent/hooks.ts
 import type { TokenUsage } from "gluon-ai";
+
+export async function onRunStart(ctx: {
+  userId: string;
+  chatId: string;
+  runId: string;
+}): Promise<void> {
+  // e.g. check rate limits, emit analytics event
+}
 
 export async function onRunEnd(ctx: {
   userId: string;
@@ -607,13 +764,22 @@ export async function onRunEnd(ctx: {
   finishReason: string;
   usage: TokenUsage; // { promptTokens, completionTokens, totalTokens }
 }): Promise<void> {
-  // persist, bill, analytics, …
+  // e.g. record billing, persist usage to your DB
+}
+
+export async function onRunError(ctx: {
+  userId: string;
+  error: Error;
+}): Promise<void> {
+  // e.g. log to Sentry, alert on critical failure
 }
 ```
 
-Tokens are summed across all tool rounds in the run.
+`usage` is summed across all tool-call rounds in the run — it reflects the total cost of the full agent loop, not just the final response step.
 
-**Client** — `adapter.lastRunUsage` via `useAgentContext()`:
+### Client-side token display
+
+`adapter.lastRunUsage` holds the counts from the most recent completed run. Access it anywhere inside `AgentProvider`:
 
 ```tsx
 "use client";
