@@ -15,13 +15,13 @@ import { useAgentContext } from "../provider/AgentProvider";
 import { MessageList } from "../messages/MessageList";
 import { UserMessage } from "../messages/UserMessage";
 import { AssistantMessage } from "../messages/AssistantMessage";
+import { EmptyView } from "../styled/EmptyView";
 import type { MessageListProps } from "../messages/MessageList";
 import type { UserMessageProps } from "../messages/UserMessage";
 import type { AssistantMessageProps } from "../messages/AssistantMessage";
 import type { ThoughtWindowProps } from "../messages/thoughts/ThoughtWindow";
 import {
   FileText,
-  ArrowDownRight,
   Globe,
   Workflow,
   Search,
@@ -690,109 +690,6 @@ function StyledUserMessage({ message, style }: UserMessageProps) {
   );
 }
 
-// ── Suggested-prompt skeletons ────────────────────────────────────────────
-
-function PromptSkeletons() {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="gluon-ml-skel-block"
-          style={{
-            height: 40,
-            borderRadius: 12,
-            background: "var(--gluon-ml-skel)",
-            width: "100%",
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ── Empty state ───────────────────────────────────────────────────────────
-
-/**
- * `suggestedPrompts`:
- *  - `null`     → config still loading → show skeleton bars
- *  - `[]`       → config loaded, no prompts → show nothing below the headline
- *  - `string[]` → show prompt buttons
- */
-function EmptyState({ suggestedPrompts }: { suggestedPrompts: string[] | null }) {
-  const { adapter } = useAgentContext();
-  const hasPrompts = Array.isArray(suggestedPrompts) && suggestedPrompts.length > 0;
-  const isLoading = suggestedPrompts === null;
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        paddingTop: 16,
-        paddingBottom: 0,
-      }}
-    >
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 12,
-          padding: "0 8px",
-          textAlign: "center",
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <p
-            style={{
-              fontSize: "1rem",
-              fontWeight: 500,
-              color: "var(--gluon-ml-fg-secondary)",
-              lineHeight: 1.375,
-              margin: 0,
-            }}
-          >
-            How can I help?
-          </p>
-          <p
-            style={{
-              fontSize: "0.75rem",
-              color: "var(--gluon-ml-fg-subtle)",
-              lineHeight: 1.625,
-              maxWidth: 180,
-              margin: 0,
-            }}
-          >
-            Ask me anything
-          </p>
-        </div>
-      </div>
-
-      {isLoading && <PromptSkeletons />}
-
-      {hasPrompts && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
-          {(suggestedPrompts as string[]).slice(0, 3).map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => void adapter.sendUserMessage(p)}
-              className="gluon-ml-prompt-btn"
-            >
-              <span className="gluon-ml-prompt-text">{p}</span>
-              <ArrowDownRight size={14} className="gluon-ml-prompt-icon" />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Loading skeleton ──────────────────────────────────────────────────────
 
 const skelBase: CSSProperties = {
@@ -920,7 +817,6 @@ export function ChatMessageList({
 }: ChatMessageListProps) {
   const {
     adapter,
-    suggestedPrompts: ctxSuggestedPrompts,
     toolUi: _toolUi,
   } = useAgentContext();
 
@@ -987,11 +883,11 @@ export function ChatMessageList({
           skeletonContent
         ) : isEmpty ? (
           // Handle empty state here so we can pass suggestedPrompts=null (loading)
-          // directly to EmptyState without losing the null → undefined collapse in MessageList.
+          // directly to EmptyView without losing the null → undefined collapse in MessageList.
           emptyView !== undefined ? (
             <>{emptyView}</>
           ) : (
-            <EmptyState suggestedPrompts={ctxSuggestedPrompts} />
+            <EmptyView darkMode={darkMode} />
           )
         ) : (
           <MessageList

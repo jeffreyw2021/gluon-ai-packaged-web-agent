@@ -36,7 +36,7 @@ export interface SendButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
  *
  * `data-slot="send-button"` is set on the root element for CSS targeting.
  */
-export function SendButton({ children, text, attachments, disabled, onClick, ...rest }: SendButtonProps) {
+export function HeadlessSendButton({ children, text, attachments, disabled, onClick, ...rest }: SendButtonProps) {
   const { adapter } = useAgentContext();
   const { sendUserMessage, runPhase, composer } = adapter;
   const isActive = isLiveRunPhase(runPhase);

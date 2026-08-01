@@ -10,12 +10,12 @@ import { useAgentContext } from "../provider/AgentProvider";
 import { useAttachments } from "../hooks/useAttachments";
 import { useSpeechTranscriber } from "../hooks/useSpeechTranscriber";
 import { useComposerActions } from "../hooks/useComposerActions";
-import { ChatInput } from "../input/ChatInput";
+import { HeadlessChatInput } from "../input/ChatInput";
 import { LiveTranscript } from "../display/LiveTranscript";
-import { AttachButton } from "../buttons/AttachButton";
+import { HeadlessAttachButton } from "../buttons/AttachButton";
 import { AttachmentChip } from "../display/AttachmentChip";
 import type { Attachment } from "../hooks/useAttachments";
-import type { ChatInputProps, ChatInputHandle } from "../input/ChatInput";
+import type { ChatInputProps as HeadlessChatInputProps, ChatInputHandle } from "../input/ChatInput";
 import { X, Paperclip, ArrowRight, Square, Mic } from "lucide-react";
 
 // ── Scoped CSS ─────────────────────────────────────────────────────────────
@@ -322,7 +322,7 @@ export function ChatInputBar({
     }
   }, [isListening]);
 
-  const chatInputRunPhase = runPhase as ChatInputProps["runPhase"];
+  const chatInputRunPhase = runPhase as HeadlessChatInputProps["runPhase"];
 
   const rootStyle: CSSProperties = {
     flexShrink: 0,
@@ -481,7 +481,7 @@ export function ChatInputBar({
           )}
 
           {/* Textarea + action row */}
-          <ChatInput
+          <HeadlessChatInput
             ref={chatInputRef}
             value={composer.inputText}
             onChange={composer.setInputText}
@@ -521,7 +521,7 @@ export function ChatInputBar({
                 {/* Left: attach button */}
                 <div className="gluon-ib-action-left" style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   {attachEnabled && (
-                    <AttachButton
+                    <HeadlessAttachButton
                       onFiles={addFiles}
                       accept="*"
                       multiple
@@ -532,7 +532,7 @@ export function ChatInputBar({
                       {attach?.renderButton
                         ? attach.renderButton({ disabled: isListening })
                         : <Paperclip width={14} height={14} />}
-                    </AttachButton>
+                    </HeadlessAttachButton>
                   )}
                 </div>
 

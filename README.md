@@ -120,7 +120,7 @@ instrumentation.ts
 
 
 
-## Frontend — three ways to use the UI
+## Frontend — four layers of UI
 
 Everything lives under `gluon-ai/react`. Pick the layer that matches how much control you want.
 
@@ -140,21 +140,87 @@ import { GluonAgentPanel } from "gluon-ai/react";
 | Prop                                  | Description                                                                               |
 | ------------------------------------- | ----------------------------------------------------------------------------------------- |
 | `basePath`                            | API route prefix (default `"/api/gluon-ai"`)                                              |
-| `darkMode`                            | Dark palette for the shell and Layer 2 children                                           |
+| `darkMode`                            | Dark palette for the shell and all children                                               |
 | `frostedGlass`                        | Blur + translucent shell instead of a solid background                                    |
 | `suggestedPrompts`                    | Empty-state chips; omit to load from `GET {basePath}/config`                              |
 | `actionBlocks`                        | Map of tool name → React component for in-stream UI                                       |
 | `queryClient`                         | Share an existing TanStack Query client                                                   |
 | `style` / `className`                 | Applied to the outermost shell                                                            |
-| `topBar` / `messageList` / `inputBar` | Prop overrides forwarded to each Layer 2 child (`darkMode` stays controlled by the panel) |
+| `topBar` / `messageList` / `inputBar` | Prop overrides forwarded to each Layer 3 child                                            |
 | `children`                            | Replace the default body while keeping `AgentProvider`                                    |
 
 
 
 
-### 2. Compose — Layer 2 pieces
+### 2. Styled atoms — Layer 2
 
-Same styled pieces, assembled yourself inside `AgentProvider`:
+Fine-grained, default-styled controls. Wire one atom at a time into your own layout:
+
+```tsx
+import {
+  AgentProvider,
+  NewChatButton,
+  ModeSwitch,
+  ChatSelect,
+  EmptyView,
+  SendButton,
+  AttachButton,
+  ChatInput,
+  MicButton,
+} from "gluon-ai/react";
+
+<AgentProvider basePath="/api/gluon-ai">
+  {/* your own layout — place atoms wherever you like */}
+  <NewChatButton />
+  <ModeSwitch />
+  <ChatSelect />
+  <EmptyView maxSuggestedPrompts={3} />
+  <ChatInput renderSubmitButton={({ isActive, canSend }) => (
+    <div>
+      <AttachButton />
+      <MicButton />
+      <SendButton />
+    </div>
+  )} />
+</AgentProvider>
+```
+
+All atoms read from `AgentProvider` — no data props required. Only pass props to override.
+
+**Top-bar atoms**
+
+| Export              | Description                                                           |
+| ------------------- | --------------------------------------------------------------------- |
+| `NewChatButton`     | `+` button; wires `useChatList().newChat` automatically               |
+| `ModeSwitch`        | Simple / Auto / Think pill group; wires `reasoningMode` automatically |
+| `ChatSelect`        | Trigger button + `ChatSelectMenu` dropdown; wires `useChatList`       |
+| `ChatSelectMenu`    | Scrollable list of chat rows                                          |
+| `ChatSelectMenuItem`| Single chat row with delete affordance                                |
+
+**Message-list atoms**
+
+| Export                  | Description                                                               |
+| ----------------------- | ------------------------------------------------------------------------- |
+| `EmptyView`             | "How can I help?" empty state with suggested-prompt chips from context    |
+| `SuggestedPromptButton` | Single prompt chip; accepts `label` + `onClick`                           |
+
+`EmptyView` props: `maxSuggestedPrompts` (default `3`), `suggestedPrompts` (falls back to context), `onSelect`, `darkMode`, `components.SuggestedPromptButton`.
+
+**Input-bar atoms**
+
+| Export                    | Description                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| `ChatInput`               | Frosted-glass container + styled textarea; pass `renderSubmitButton` for the action row |
+| `AttachButton`            | Styled file-attach button with default `<Paperclip>` icon                    |
+| `MicButton`               | Styled mic toggle; share a `transcriber` instance with `TranscriptionIndicator` |
+| `TranscriptionIndicator`  | Pulsing dot + live transcript text; requires a shared `transcriber` prop     |
+| `SendButton`              | Styled send/stop toggle; wires `adapter` automatically                       |
+
+
+
+### 3. Compose regions — Layer 3
+
+Same styled atoms, assembled into full-height regions. Use when you want to replace one region (e.g. a custom top bar) while keeping the others as-is:
 
 ```tsx
 import {
@@ -171,19 +237,15 @@ import {
 </AgentProvider>
 ```
 
-Each Layer 2 component reads from context — no data props required. Lay them out however you want (flex column, sidebar, etc.).
+`ChatTopBar`: `showReasoningPills`, `showChatHistory`, `onNewChat`, `slots.newChatButton`, `style` / `className` / `styles`, `darkMode`.
 
-`AgentProvider`**:** `basePath`, `actionBlocks`, `suggestedPrompts`, `queryClient`.
+`ChatMessageList`: `autoScroll`, `emptyView`, `skeleton`, `slots` (`userMessage`, `assistantMessage`, `thoughtWindow`, `textContent`), `style` / `className` / `styles`, `darkMode`.
 
-`ChatTopBar`**:** `showReasoningPills`, `showChatHistory`, `onNewChat`, `slots.newChatButton`, `style` / `className` / `styles`, `darkMode`.
+`ChatInputBar`: `placeholder`, `disclaimer`, `attach`, `voice`, `slots.sendButton`, `style` / `className` / `styles`, `darkMode`.
 
-`ChatMessageList`**:** `autoScroll`, `emptyView`, `skeleton`, `slots` (`userMessage`, `assistantMessage`, `thoughtWindow`, `textContent`), `style` / `className` / `styles`, `darkMode`.
+### 4. Headless — full control
 
-`ChatInputBar`**:** `placeholder`, `disclaimer`, `attach`, `voice`, `slots.sendButton`, `style` / `className` / `styles`, `darkMode`.
-
-### 3. Headless — assemble your own
-
-Wrap your UI in `AgentProvider`, then compose any exports from `gluon-ai/react` however you like:
+Behavior-only primitives. Zero built-in styles — supply your own CSS.
 
 ```tsx
 import { AgentProvider } from "gluon-ai/react";
@@ -215,17 +277,18 @@ import { AgentProvider } from "gluon-ai/react";
 | `ActionBlockSlot`   | Renders a registered action-block component for a tool |
 
 
-**Input**
+**Input (headless)**
 
 
-| Export                                  | Description                                                |
-| --------------------------------------- | ---------------------------------------------------------- |
-| `ChatInput`                             | Headless composer (textarea + wiring for send/stop/attach) |
-| `SendButton` / `StopButton`             | Send and cancel-run controls                               |
-| `AttachButton`                          | File attach control                                        |
-| `RecordButton` / `TranscribeButton`     | Voice record / speech-to-text controls                     |
-| `RecordingIndicator` / `LiveTranscript` | Recording state + live transcript display                  |
-| `AttachmentChip`                        | Chip for an attached file                                  |
+| Export                                  | Description                                                             |
+| --------------------------------------- | ----------------------------------------------------------------------- |
+| `HeadlessChatInput`                     | Composer (textarea + wiring for send/stop/attach) — no styles           |
+| `HeadlessSendButton`                    | Send control (send-only, no stop) — no styles                           |
+| `HeadlessAttachButton`                  | File attach control — no styles                                         |
+| `StopButton`                            | Cancel-run control — no styles                                          |
+| `RecordButton` / `TranscribeButton`     | Voice record / speech-to-text controls                                  |
+| `RecordingIndicator` / `LiveTranscript` | Recording state + live transcript display                               |
+| `AttachmentChip`                        | Chip for an attached file                                               |
 
 
 **Hooks** (use inside `AgentProvider`)
@@ -242,8 +305,6 @@ import { AgentProvider } from "gluon-ai/react";
 | `useRecorder` / `useSpeechTranscriber`     | Mic recording + transcription                                       |
 | `useFileExtraction` / `useComposerActions` | File text extraction + composer action helpers                      |
 
-
-Layer 2 components (`ChatTopBar`, `ChatMessageList`, `ChatInputBar`) and `GluonAgentPanel` are also importable here if you want to mix styled pieces with custom layout.
 
 ---
 

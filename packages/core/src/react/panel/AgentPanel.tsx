@@ -3,7 +3,7 @@
 import React, { useCallback, type CSSProperties } from "react";
 import { useAgentContext } from "../provider/AgentProvider";
 import { MessageList } from "../messages/MessageList";
-import { ChatInput } from "../input/ChatInput";
+import { HeadlessChatInput } from "../input/ChatInput";
 import { buildSendPayload } from "../lib/attachmentPayload";
 import type { UseAttachmentsReturn } from "../hooks/useAttachments";
 import type { MessageListComponentSlots } from "../messages/MessageList";
@@ -144,7 +144,7 @@ export function AgentPanel({
         </div>
 
         <div data-slot="input" className={classNames.input?.root} style={styles.input?.root}>
-          <ChatInput
+          <HeadlessChatInput
             value={composer.inputText}
             onChange={composer.setInputText}
             onSend={handleSend}

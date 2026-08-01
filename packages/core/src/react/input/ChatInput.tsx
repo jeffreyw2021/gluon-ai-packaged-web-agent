@@ -80,8 +80,8 @@ export interface ChatInputHandle {
  *
  * Forward a `ref` to get access to `ChatInputHandle.autoGrow()`.
  */
-export const ChatInput = React.forwardRef<ChatInputHandle, ChatInputProps>(
-  function ChatInput({
+export const HeadlessChatInput = React.forwardRef<ChatInputHandle, ChatInputProps>(
+  function HeadlessChatInput({
     value,
     onChange,
     onSend,

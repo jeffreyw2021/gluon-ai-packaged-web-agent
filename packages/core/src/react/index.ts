@@ -36,33 +36,102 @@ export type { UseFileExtractionReturn } from "./hooks/useFileExtraction";
 export { useComposerActions } from "./hooks/useComposerActions";
 export type { UseComposerActionsOptions, UseComposerActionsReturn } from "./hooks/useComposerActions";
 
-// ── Panel orchestrator ────────────────────────────────────────────────────
+// ── Layer 1: Drop-in composed panel ──────────────────────────────────────
+// Wraps AgentProvider + all layers in a styled shell. One import, ready.
+export { GluonAgentPanel } from "./panel/GluonAgentPanel";
+export type { GluonAgentPanelProps } from "./panel/GluonAgentPanel";
+
+// ── Layer 2: Styled atoms ─────────────────────────────────────────────────
+// Short-named, default-styled fine-grained controls. Wired to AgentProvider.
+// Can be used standalone or composed into custom region layouts.
+
+// Top-bar atoms
+export { NewChatButton } from "./styled/NewChatButton";
+export type { NewChatButtonProps } from "./styled/NewChatButton";
+
+export { ModeSwitch } from "./styled/ModeSwitch";
+export type { ModeSwitchProps } from "./styled/ModeSwitch";
+
+export { ChatSelect } from "./styled/ChatSelect";
+export type { ChatSelectProps, ChatSelectStyles } from "./styled/ChatSelect";
+
+export { ChatSelectMenu } from "./styled/ChatSelectMenu";
+export type { ChatSelectMenuProps } from "./styled/ChatSelectMenu";
+
+export { ChatSelectMenuItem } from "./styled/ChatSelectMenuItem";
+export type { ChatSelectMenuItemProps } from "./styled/ChatSelectMenuItem";
+
+// Message-list atoms
+export { EmptyView } from "./styled/EmptyView";
+export type { EmptyViewProps } from "./styled/EmptyView";
+
+export { SuggestedPromptButton } from "./styled/SuggestedPromptButton";
+export type { SuggestedPromptButtonProps } from "./styled/SuggestedPromptButton";
+
+// Input-bar atoms
+export { AttachButton } from "./styled/AttachButton";
+export type { AttachButtonProps } from "./styled/AttachButton";
+
+export { ChatInput } from "./styled/ChatInput";
+export type { ChatInputProps, ChatInputHandle } from "./styled/ChatInput";
+
+export { MicButton } from "./styled/MicButton";
+export type { MicButtonProps } from "./styled/MicButton";
+
+export { TranscriptionIndicator } from "./styled/TranscriptionIndicator";
+export type { TranscriptionIndicatorProps } from "./styled/TranscriptionIndicator";
+
+export { SendButton } from "./styled/SendButton";
+export type { SendButtonProps } from "./styled/SendButton";
+
+// ── Layer 3: Compose regions ─────────────────────────────────────────────
+// Self-contained region components built from Layer 2 atoms. Provide
+// region-level layout, slot overrides, and dark-mode prop passthrough.
 export { AgentPanel } from "./panel/AgentPanel";
 export type { AgentPanelProps, AgentPanelClassNames, AgentPanelStyles } from "./panel/AgentPanel";
 
-// ── Layer 2: self-contained pre-wired panel components ───────────────────
-// Each component calls its own hooks from AgentProvider and can be used
-// independently — no data props required, only customisation props.
 export { ChatTopBar } from "./panel/ChatTopBar";
-export type { ChatTopBarProps } from "./panel/ChatTopBar";
+export type { ChatTopBarProps, ChatTopBarStyles } from "./panel/ChatTopBar";
 
 export { ChatMessageList } from "./panel/ChatMessageList";
 export type { ChatMessageListProps } from "./panel/ChatMessageList";
 
 export { ChatInputBar } from "./panel/ChatInputBar";
-export type { ChatInputBarProps } from "./panel/ChatInputBar";
+export type { ChatInputBarProps, ChatInputBarStyles } from "./panel/ChatInputBar";
 
-// ── Layer 3: drop-in composed panel ──────────────────────────────────────
-// Wraps AgentProvider + Layer 2 stack in a styled shell. One import, ready.
-export { GluonAgentPanel } from "./panel/GluonAgentPanel";
-export type { GluonAgentPanelProps } from "./panel/GluonAgentPanel";
-
-// ── Chat list ─────────────────────────────────────────────────────────────
+// ── Chat list panels ──────────────────────────────────────────────────────
 export { ChatList } from "./panel/ChatList";
 export type { ChatListProps } from "./panel/ChatList";
 
 export { ChatListItem } from "./panel/ChatListItem";
 export type { ChatListItemProps } from "./panel/ChatListItem";
+
+// ── Layer 4: Headless primitives ──────────────────────────────────────────
+// Behavior-only; zero built-in styles. Compose with your own CSS.
+// Colliding names from Layer 2 carry a "Headless" prefix.
+
+export { HeadlessChatInput } from "./input/ChatInput";
+export type {
+  ChatInputProps as HeadlessChatInputProps,
+  ChatInputClassNames as HeadlessChatInputClassNames,
+  ChatInputStyles as HeadlessChatInputStyles,
+  ChatInputHandle as HeadlessChatInputHandle,
+} from "./input/ChatInput";
+
+export { HeadlessSendButton } from "./buttons/SendButton";
+export type { SendButtonProps as HeadlessSendButtonProps } from "./buttons/SendButton";
+
+export { HeadlessAttachButton } from "./buttons/AttachButton";
+export type { AttachButtonProps as HeadlessAttachButtonProps } from "./buttons/AttachButton";
+
+export { StopButton } from "./buttons/StopButton";
+export type { StopButtonProps } from "./buttons/StopButton";
+
+export { RecordButton } from "./buttons/RecordButton";
+export type { RecordButtonProps } from "./buttons/RecordButton";
+
+export { TranscribeButton } from "./buttons/TranscribeButton";
+export type { TranscribeButtonProps } from "./buttons/TranscribeButton";
 
 // ── Message primitives ────────────────────────────────────────────────────
 export { MessageList } from "./messages/MessageList";
@@ -82,26 +151,6 @@ export type { ConfirmationBlockProps, ConfirmationOption } from "./messages/Conf
 
 export { ActionBlockSlot } from "./messages/ActionBlockSlot";
 export type { ActionBlockSlotProps } from "./messages/ActionBlockSlot";
-
-// ── Chat input ────────────────────────────────────────────────────────────
-export { ChatInput } from "./input/ChatInput";
-export type { ChatInputProps, ChatInputClassNames, ChatInputStyles, ChatInputHandle } from "./input/ChatInput";
-
-// ── Headless buttons ──────────────────────────────────────────────────────
-export { SendButton } from "./buttons/SendButton";
-export type { SendButtonProps } from "./buttons/SendButton";
-
-export { StopButton } from "./buttons/StopButton";
-export type { StopButtonProps } from "./buttons/StopButton";
-
-export { AttachButton } from "./buttons/AttachButton";
-export type { AttachButtonProps } from "./buttons/AttachButton";
-
-export { RecordButton } from "./buttons/RecordButton";
-export type { RecordButtonProps } from "./buttons/RecordButton";
-
-export { TranscribeButton } from "./buttons/TranscribeButton";
-export type { TranscribeButtonProps } from "./buttons/TranscribeButton";
 
 // ── Display primitives ────────────────────────────────────────────────────
 export { RecordingIndicator } from "./display/RecordingIndicator";

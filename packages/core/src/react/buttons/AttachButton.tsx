@@ -39,17 +39,17 @@ export interface AttachButtonProps extends ButtonHTMLAttributes<HTMLButtonElemen
  * ```tsx
  * // Simplest — auto-wire with attachments hook
  * const attachments = useAttachments();
- * <AttachButton attachments={attachments} accept="image/*,.pdf">
+ * <HeadlessAttachButton attachments={attachments} accept="image/*,.pdf">
  *   <PaperclipIcon />
- * </AttachButton>
+ * </HeadlessAttachButton>
  *
  * // Manual — handle files yourself
- * <AttachButton onFiles={(files) => console.log(files)}>
+ * <HeadlessAttachButton onFiles={(files) => console.log(files)}>
  *   <PaperclipIcon />
- * </AttachButton>
+ * </HeadlessAttachButton>
  * ```
  */
-export function AttachButton({
+export function HeadlessAttachButton({
   children,
   accept = "*",
   multiple = true,
