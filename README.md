@@ -1,6 +1,6 @@
 # Gluon-ai
 
-> **Beta** — personal project, rough edges expected.
+> **Beta** project, rough edges expected.
 
 Sometimes you want to build an AI-native product from scratch. Sometimes you just want an agent inside an existing product. The backend for that second case is mostly the same every time — chats, streaming, tools, a worker, Redis, a DB. Gluon packages that stack so you can drop an agent into a Next.js app and focus on the product side.
 
@@ -75,15 +75,15 @@ That's enough for a working agent with web search, multi-chat, streaming, and th
 ## What init scaffolds
 
 
-| Path                                              | Purpose                                      |
-| ------------------------------------------------- | -------------------------------------------- |
-| `agent.config.json`                               | Model, tools, auth, prompts, env remaps      |
-| `agent/package.json`                              | `{ "type": "module" }` — silences Node ESM warnings when loading tools |
-| `agent/system-prompt.md`                          | Default system prompt (edit this freely)     |
-| `agent/tools/webSearch.ts`                        | Example tool (OpenAI web search)             |
-| `agent/context/datetime.ts`                       | Example context provider (current date/time) |
-| `[app|src/app]/api/gluon-ai/[[...path]]/route.ts` | Catch-all API route                          |
-| `instrumentation.ts`                              | Starts the BullMQ worker on Next.js boot     |
+| Path                        | Purpose                                                                |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `agent.config.json`         | Model, tools, auth, prompts, env remaps                                |
+| `agent/package.json`        | `{ "type": "module" }` — silences Node ESM warnings when loading tools |
+| `agent/system-prompt.md`    | Default system prompt (edit this freely)                               |
+| `agent/tools/webSearch.ts`  | Example tool (OpenAI web search)                                       |
+| `agent/context/datetime.ts` | Example context provider (current date/time)                           |
+| `[app                       | src/app]/api/gluon-ai/[[...path]]/route.ts`                            |
+| `instrumentation.ts`        | Starts the BullMQ worker on Next.js boot                               |
 
 
 Also:
@@ -131,17 +131,17 @@ import { GluonAgentPanel } from "gluon-ai/react";
 `basePath` defaults to `"/api/gluon-ai"` and can be omitted.
 
 
-| Prop                                  | Description                                                                               |
-| ------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `basePath`                            | API route prefix (default `"/api/gluon-ai"`)                                              |
-| `darkMode`                            | Dark palette for the shell and all children                                               |
-| `frostedGlass`                        | Blur + translucent shell instead of a solid background                                    |
-| `suggestedPrompts`                    | Empty-state chips; omit to load from `GET {basePath}/config`                              |
-| `actionBlocks`                        | Map of tool name → React component for in-stream UI                                       |
-| `queryClient`                         | Share an existing TanStack Query client                                                   |
-| `style` / `className`                 | Applied to the outermost shell                                                            |
-| `topBar` / `messageList` / `inputBar` | Prop overrides forwarded to each Layer 3 child                                            |
-| `children`                            | Replace the default body while keeping `AgentProvider`                                    |
+| Prop                                  | Description                                                  |
+| ------------------------------------- | ------------------------------------------------------------ |
+| `basePath`                            | API route prefix (default `"/api/gluon-ai"`)                 |
+| `darkMode`                            | Dark palette for the shell and all children                  |
+| `frostedGlass`                        | Blur + translucent shell instead of a solid background       |
+| `suggestedPrompts`                    | Empty-state chips; omit to load from `GET {basePath}/config` |
+| `actionBlocks`                        | Map of tool name → React component for in-stream UI          |
+| `queryClient`                         | Share an existing TanStack Query client                      |
+| `style` / `className`                 | Applied to the outermost shell                               |
+| `topBar` / `messageList` / `inputBar` | Prop overrides forwarded to each Layer 3 child               |
+| `children`                            | Replace the default body while keeping `AgentProvider`       |
 
 
 
@@ -183,32 +183,38 @@ All atoms read from `AgentProvider` — no data props required. Only pass props 
 
 **Top-bar atoms**
 
-| Export              | Description                                                           |
-| ------------------- | --------------------------------------------------------------------- |
-| `NewChatButton`     | `+` button; wires `useChatList().newChat` automatically               |
-| `ModeSwitch`        | Simple / Auto / Think pill group; wires `reasoningMode` automatically |
-| `ChatSelect`        | Trigger button + `ChatSelectMenu` dropdown; wires `useChatList`       |
-| `ChatSelectMenu`    | Scrollable list of chat rows                                          |
-| `ChatSelectMenuItem`| Single chat row with delete affordance                                |
+
+| Export               | Description                                                           |
+| -------------------- | --------------------------------------------------------------------- |
+| `NewChatButton`      | `+` button; wires `useChatList().newChat` automatically               |
+| `ModeSwitch`         | Simple / Auto / Think pill group; wires `reasoningMode` automatically |
+| `ChatSelect`         | Trigger button + `ChatSelectMenu` dropdown; wires `useChatList`       |
+| `ChatSelectMenu`     | Scrollable list of chat rows                                          |
+| `ChatSelectMenuItem` | Single chat row with delete affordance                                |
+
 
 **Message-list atoms**
 
-| Export                  | Description                                                               |
-| ----------------------- | ------------------------------------------------------------------------- |
-| `EmptyView`             | "How can I help?" empty state with suggested-prompt chips from context    |
-| `SuggestedPromptButton` | Single prompt chip; accepts `label` + `onClick`                           |
+
+| Export                  | Description                                                            |
+| ----------------------- | ---------------------------------------------------------------------- |
+| `EmptyView`             | "How can I help?" empty state with suggested-prompt chips from context |
+| `SuggestedPromptButton` | Single prompt chip; accepts `label` + `onClick`                        |
+
 
 `EmptyView` props: `maxSuggestedPrompts` (default `3`), `suggestedPrompts` (falls back to context), `onSelect`, `darkMode`, `components.SuggestedPromptButton`.
 
 **Input-bar atoms**
 
-| Export                    | Description                                                                  |
-| ------------------------- | ---------------------------------------------------------------------------- |
-| `ChatInput`               | Frosted-glass container + styled textarea; pass `renderSubmitButton` for the action row |
-| `AttachButton`            | Styled file-attach button with default `<Paperclip>` icon                    |
-| `MicButton`               | Styled mic toggle; share a `transcriber` instance with `TranscriptionIndicator` |
-| `TranscriptionIndicator`  | Pulsing dot + live transcript text; requires a shared `transcriber` prop     |
-| `SendButton`              | Styled send/stop toggle; wires `adapter` automatically                       |
+
+| Export                   | Description                                                                             |
+| ------------------------ | --------------------------------------------------------------------------------------- |
+| `ChatInput`              | Frosted-glass container + styled textarea; pass `renderSubmitButton` for the action row |
+| `AttachButton`           | Styled file-attach button with default `<Paperclip>` icon                               |
+| `MicButton`              | Styled mic toggle; share a `transcriber` instance with `TranscriptionIndicator`         |
+| `TranscriptionIndicator` | Pulsing dot + live transcript text; requires a shared `transcriber` prop                |
+| `SendButton`             | Styled send/stop toggle; wires `adapter` automatically                                  |
+
 
 
 
@@ -274,15 +280,15 @@ import { AgentProvider } from "gluon-ai/react";
 **Input (headless)**
 
 
-| Export                                  | Description                                                             |
-| --------------------------------------- | ----------------------------------------------------------------------- |
-| `HeadlessChatInput`                     | Composer (textarea + wiring for send/stop/attach) — no styles           |
-| `HeadlessSendButton`                    | Send control (send-only, no stop) — no styles                           |
-| `HeadlessAttachButton`                  | File attach control — no styles                                         |
-| `StopButton`                            | Cancel-run control — no styles                                          |
-| `RecordButton` / `TranscribeButton`     | Voice record / speech-to-text controls                                  |
-| `RecordingIndicator` / `LiveTranscript` | Recording state + live transcript display                               |
-| `AttachmentChip`                        | Chip for an attached file                                               |
+| Export                                  | Description                                                   |
+| --------------------------------------- | ------------------------------------------------------------- |
+| `HeadlessChatInput`                     | Composer (textarea + wiring for send/stop/attach) — no styles |
+| `HeadlessSendButton`                    | Send control (send-only, no stop) — no styles                 |
+| `HeadlessAttachButton`                  | File attach control — no styles                               |
+| `StopButton`                            | Cancel-run control — no styles                                |
+| `RecordButton` / `TranscribeButton`     | Voice record / speech-to-text controls                        |
+| `RecordingIndicator` / `LiveTranscript` | Recording state + live transcript display                     |
+| `AttachmentChip`                        | Chip for an attached file                                     |
 
 
 **Hooks** (use inside `AgentProvider`)
@@ -343,7 +349,7 @@ import { AgentProvider } from "gluon-ai/react";
 | `skills`                     | Markdown docs the agent can load via built-in `read_skill`              |
 | `context`                    | Providers called fresh every request; injected under `## Context`       |
 | `actionBlocks`               | Tool name → React component path for in-stream UI cards                 |
-| `auth.handler`               | `"allow"` | `"deny"` | path to a custom handler                         |
+| `auth.handler`               | `"allow"`                                                               |
 | `hooks`                      | Path exporting optional `onRunStart` / `onRunEnd` / `onRunError`        |
 | `db.provider` / `db.adapter` | Built-in Prisma provider, or a custom DB adapter path                   |
 | `suggestedPrompts`           | Empty-state chips (also served from `GET …/config`)                     |
@@ -372,18 +378,22 @@ OPENAI_API_KEY=sk-...
 { "model": "openai/o4-mini" }
 ```
 
+
+
 ### Other providers
 
 For any other provider, set its API key **and** install its optional SDK package. Gluon detects both at startup and registers the provider automatically — no code changes needed.
 
-| Provider   | Model prefix | Env var                        | Install                   |
-| ---------- | ------------ | ------------------------------ | ------------------------- |
-| Anthropic  | `anthropic`  | `ANTHROPIC_API_KEY`            | `npm i @ai-sdk/anthropic` |
-| Google     | `google`     | `GOOGLE_GENERATIVE_AI_API_KEY` | `npm i @ai-sdk/google`    |
-| Mistral    | `mistral`    | `MISTRAL_API_KEY`              | `npm i @ai-sdk/mistral`   |
-| Groq       | `groq`       | `GROQ_API_KEY`                 | `npm i @ai-sdk/groq`      |
-| xAI        | `xai`        | `XAI_API_KEY`                  | `npm i @ai-sdk/xai`       |
-| DeepSeek   | `deepseek`   | `DEEPSEEK_API_KEY`             | `npm i @ai-sdk/deepseek`  |
+
+| Provider  | Model prefix | Env var                        | Install                   |
+| --------- | ------------ | ------------------------------ | ------------------------- |
+| Anthropic | `anthropic`  | `ANTHROPIC_API_KEY`            | `npm i @ai-sdk/anthropic` |
+| Google    | `google`     | `GOOGLE_GENERATIVE_AI_API_KEY` | `npm i @ai-sdk/google`    |
+| Mistral   | `mistral`    | `MISTRAL_API_KEY`              | `npm i @ai-sdk/mistral`   |
+| Groq      | `groq`       | `GROQ_API_KEY`                 | `npm i @ai-sdk/groq`      |
+| xAI       | `xai`        | `XAI_API_KEY`                  | `npm i @ai-sdk/xai`       |
+| DeepSeek  | `deepseek`   | `DEEPSEEK_API_KEY`             | `npm i @ai-sdk/deepseek`  |
+
 
 Example after installing and setting the key:
 
@@ -406,6 +416,8 @@ AI_GATEWAY_API_KEY=your_gateway_key
 { "model": "gateway/google/gemini-2.0-flash" }
 ```
 
+
+
 ### Custom env var names
 
 If your key is stored under a different name, remap it:
@@ -423,15 +435,21 @@ If your key is stored under a different name, remap it:
 
 ## Tools
 
+
+
 ### Default behaviour (no tools configured)
 
 Three built-in tools are always available, regardless of what you configure:
 
-| Tool | When it fires |
-| --- | --- |
-| `discover_tools` | Agent calls this automatically before using any custom tool for the first time to read descriptions and parameter signatures |
-| `request_confirmation` | Called when a tool has `needsApproval: true` — pauses the run and shows a confirmation card in the UI |
-| `read_skill` | Added automatically when `skills` is non-empty — lets the agent load a skill document on demand |
+
+| Tool                   | When it fires                                                                                                                |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `discover_tools`       | Agent calls this automatically before using any custom tool for the first time to read descriptions and parameter signatures |
+| `request_confirmation` | Called when a tool has `needsApproval: true` — pauses the run and shows a confirmation card in the UI                        |
+| `read_skill`           | Added automatically when `skills` is non-empty — lets the agent load a skill document on demand                              |
+
+
+
 
 ### Defining a tool
 
@@ -464,16 +482,20 @@ export default defineTool({
 
 All `defineTool` fields:
 
-| Field | Required | Description |
-| --- | --- | --- |
-| `description` | Yes | Shown to the model — describe what the tool does and when to use it |
-| `inputSchema` | Yes | Zod schema; the model must match it; used for TypeScript types in `execute` |
-| `execute` | Yes | Called with the validated input when the agent decides to invoke the tool |
-| `displayLabel` | No | Short human-readable name shown in the UI (e.g. "Web Search") |
-| `needsApproval` | No | `true` / `false` or a function `(input) => boolean` — see below |
-| `ui.executingLabel` | No | ThoughtWindow text while the tool is running (e.g. `"Searching…"`) |
-| `ui.completedLabel` | No | ThoughtWindow text after the tool finishes (e.g. `"Search done"`) |
-| `ui.icon` | No | Lucide icon name for the ThoughtWindow row (e.g. `"Globe"`, `"FileText"`) — defaults to `"Settings"` |
+
+| Field               | Required | Description                                                                                          |
+| ------------------- | -------- | ---------------------------------------------------------------------------------------------------- |
+| `description`       | Yes      | Shown to the model — describe what the tool does and when to use it                                  |
+| `inputSchema`       | Yes      | Zod schema; the model must match it; used for TypeScript types in `execute`                          |
+| `execute`           | Yes      | Called with the validated input when the agent decides to invoke the tool                            |
+| `displayLabel`      | No       | Short human-readable name shown in the UI (e.g. "Web Search")                                        |
+| `needsApproval`     | No       | `true` / `false` or a function `(input) => boolean` — see below                                      |
+| `ui.executingLabel` | No       | ThoughtWindow text while the tool is running (e.g. `"Searching…"`)                                   |
+| `ui.completedLabel` | No       | ThoughtWindow text after the tool finishes (e.g. `"Search done"`)                                    |
+| `ui.icon`           | No       | Lucide icon name for the ThoughtWindow row (e.g. `"Globe"`, `"FileText"`) — defaults to `"Settings"` |
+
+
+
 
 ### Human approval
 
@@ -498,6 +520,8 @@ npx gluon-ai add-tool my_tool
 
 
 ## Skills
+
+
 
 ### What skills are
 
@@ -538,11 +562,13 @@ At runtime the agent receives an index of available skills and their numbers. It
 
 ### Skills vs context providers
 
-| | Skills | Context providers |
-| --- | --- | --- |
-| When loaded | On demand by the agent (`read_skill`) | Every request, unconditionally |
+
+|              | Skills                                      | Context providers                                  |
+| ------------ | ------------------------------------------- | -------------------------------------------------- |
+| When loaded  | On demand by the agent (`read_skill`)       | Every request, unconditionally                     |
 | Content type | Static Markdown docs, procedures, reference | Dynamic values: current time, user state, env data |
-| Token cost | Only when read | Always added to every system prompt |
+| Token cost   | Only when read                              | Always added to every system prompt                |
+
 
 Use **skills** for large reference material that is only sometimes needed. Use **context providers** for small dynamic strings that should always be present.
 
@@ -551,6 +577,8 @@ Use **skills** for large reference material that is only sometimes needed. Use *
 
 
 ## Context providers
+
+
 
 ### What context providers do
 
@@ -589,6 +617,8 @@ List any number of files; each one contributes a line to the `## Context` block:
 }
 ```
 
+
+
 ### Accessing external data
 
 Context providers are regular async functions — you can fetch from your DB, call an API, or read environment variables:
@@ -611,6 +641,8 @@ export default async function (): Promise<string> {
 
 ## Auth
 
+
+
 ### Default behaviour (no config needed)
 
 Out of the box, all requests are **allowed without a check** and attributed to the user ID `"anon"`. Every chat session, message, and run is stored under that single identity. This is fine for local development, internal tools, or single-user demos.
@@ -625,11 +657,13 @@ Wire in your own auth logic by creating a handler module and pointing `agent.con
 
 The handler is a TypeScript file that **default-exports** an async function receiving the raw `Request`. Return a value to tell Gluon what to do:
 
-| Return value | Effect |
-| ------------ | ------ |
+
+| Return value         | Effect                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------ |
 | `string` (non-empty) | Request is allowed; the string is used as the **userId** (scopes chat history, runs, etc.) |
-| `true` | Request is allowed as the anonymous user `"anon"` |
-| `false` or `null` | Request is **rejected with HTTP 401** |
+| `true`               | Request is allowed as the anonymous user `"anon"`                                          |
+| `false` or `null`    | Request is **rejected with HTTP 401**                                                      |
+
 
 ```typescript
 // agent/auth.ts  — example using NextAuth v5
@@ -642,12 +676,17 @@ export default async function (req: Request): Promise<string | boolean | null> {
 }
 ```
 
+
+
 ### What the userId controls
 
 Once a userId is returned, Gluon:
+
 - **Scopes all chat sessions** to that userId — users only see their own chat history.
 - **Scopes all run records** to that userId — billing, rate-limiting, and logs are per-user.
 - Passes the userId to **lifecycle hooks** (`onRunStart`, `onRunEnd`, `onRunError`) so you can record usage, enforce rate limits, or trigger billing per user.
+
+
 
 ### Role-based access
 
@@ -670,6 +709,8 @@ export default async function (req: Request) {
 
 
 ## Action blocks (in-stream UI)
+
+
 
 ### What action blocks do
 
@@ -699,13 +740,17 @@ export default function MyToolBlock({ toolInput, toolOutput, state }: ActionBloc
 
 All `ActionBlockProps` fields:
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `toolInput` | `unknown` | The validated input the agent passed to the tool |
-| `toolOutput` | `unknown` | The value returned by `execute` (undefined while the tool is still running) |
-| `toolName` | `string` | The registered tool name (e.g. `"my_tool"`) |
-| `messageId` | `string` | ID of the assistant message this block belongs to |
-| `state` | `"call"` \| `"result"` \| `"partial-call"` | Lifecycle state: `"call"` while running, `"result"` after |
+
+| Prop         | Type                                     | Description                                                                 |
+| ------------ | ---------------------------------------- | --------------------------------------------------------------------------- |
+| `toolInput`  | `unknown`                                | The validated input the agent passed to the tool                            |
+| `toolOutput` | `unknown`                                | The value returned by `execute` (undefined while the tool is still running) |
+| `toolName`   | `string`                                 | The registered tool name (e.g. `"my_tool"`)                                 |
+| `messageId`  | `string`                                 | ID of the assistant message this block belongs to                           |
+| `state`      | `"call"` | `"result"` | `"partial-call"` | Lifecycle state: `"call"` while running, `"result"` after                   |
+
+
+
 
 ### Wiring the component to the client
 
@@ -726,6 +771,8 @@ import MyToolBlock from "@/agent/blocks/MyToolBlock";
 
 
 ## Token usage & lifecycle hooks
+
+
 
 ### Default behaviour
 
