@@ -12,8 +12,10 @@ import { publishRunActivity } from "../live/publishRunActivity";
 import { redisLiveBus } from "../live/RedisLiveBus";
 import { executeRound, type RoundExecutorInput } from "./RoundExecutor";
 import type { LoadedConfig } from "../../config/loader";
+import { getEnvVar } from "../../config/loader";
 import { getDb } from "../db/adapterRegistry";
 import type { TokenUsage } from "../../types/TokenUsage";
+
 export interface RunEngineInput {
   chatJobRunId: string;
   chatId: string;
@@ -170,9 +172,17 @@ async function finalizeRun(args: {
       errorMessage: args.errorMessage ?? null,
     });
     if (nextStatus === "COMPLETED") {
-        scheduleChatTitleGeneration(args.chatId, args.userId, {
-          modelId: args.loadedConfig.raw.model,
-        });
+      const apiKey = (() => {
+        try {
+          return getEnvVar("openaiApiKey", args.loadedConfig.raw);
+        } catch {
+          return undefined;
+        }
+      })();
+      scheduleChatTitleGeneration(args.chatId, args.userId, {
+        modelId: args.loadedConfig.raw.model,
+        apiKey,
+      });
 
       if (args.loadedConfig.hooks.onRunEnd) {
         void args.loadedConfig.hooks.onRunEnd({

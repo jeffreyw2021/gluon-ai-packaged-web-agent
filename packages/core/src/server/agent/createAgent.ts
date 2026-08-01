@@ -1,21 +1,14 @@
 
-import { ToolLoopAgent, extractReasoningMiddleware, stepCountIs, tool, wrapLanguageModel } from "ai";
-import type { LanguageModel, ToolSet } from "ai";
+import { ToolLoopAgent, stepCountIs, tool } from "ai";
+import type { ToolSet } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import type { LoadedConfig } from "../../config/loader";
-import { getLanguageModel, normalizeModelId } from "../model/resolveModel";
 import { requestConfirmation } from "./tools/requestConfirmation";
 import { createReadSkillTool } from "./tools/readSkill";
 import { createDiscoverToolsTool } from "./tools/discoverTools";
 
-const THINKING_INSTRUCTION = `\n\n## Think mode
-Think carefully before responding. First write out your reasoning inside <thinking>...</thinking> tags — work through the problem step by step, consider edge cases, and only then write your final answer outside the tags. Your thinking is visible to the user.`;
-
-function buildSystemPrompt(
-  config: LoadedConfig,
-  contextParts: string[],
-  sendReasoning: boolean,
-): string {
+function buildSystemPrompt(config: LoadedConfig, contextParts: string[]): string {
   let prompt = config.systemPrompt;
 
   if (contextParts.length > 0) {
@@ -39,19 +32,12 @@ function buildSystemPrompt(
         .join("\n");
   }
 
-  if (sendReasoning) {
-    prompt += THINKING_INSTRUCTION;
-  }
-
   return prompt;
 }
 
-export interface CreateAgentOptions {
-  /** When true, select the reasoningModel (if configured) and enable reasoning. */
-  sendReasoning?: boolean;
-}
-
-export async function createAgent(config: LoadedConfig, opts: CreateAgentOptions = {}) {
+export async function createAgent(config: LoadedConfig) {
+  // Call context providers fresh on every request so dynamic values (e.g.
+  // current date/time) are always up to date.
   const contextParts: string[] = [];
   for (const provider of config.contextProviders ?? []) {
     try {
@@ -66,6 +52,8 @@ export async function createAgent(config: LoadedConfig, opts: CreateAgentOptions
 
   tools["request_confirmation"] = requestConfirmation;
 
+  // Always inject discover_tools when the config has at least one custom tool.
+  // It is an internal tool — never visible in agent.config.json.
   if (Object.keys(config.tools).length > 0) {
     tools["discover_tools"] = createDiscoverToolsTool(config.tools);
   }
@@ -81,37 +69,32 @@ export async function createAgent(config: LoadedConfig, opts: CreateAgentOptions
       ...(def.needsApproval !== undefined
         ? { needsApproval: def.needsApproval as (input: unknown) => boolean }
         : {}),
-      execute: async (input, execOpts) => def.execute(input, execOpts),
+      execute: async (input, opts) => def.execute(input, opts),
     });
   }
 
-  const sendReasoning = opts.sendReasoning ?? false;
-
-  // When Think mode is active, prefer the dedicated reasoningModel if configured.
-  const rawModelId =
-    sendReasoning && config.raw.reasoningModel
-      ? config.raw.reasoningModel
-      : config.raw.model;
-
-  const normalizedId = normalizeModelId(rawModelId);
-  let model: LanguageModel = getLanguageModel(normalizedId);
-
-  // Wrap with extractReasoningMiddleware so <thinking>…</thinking> blocks
-  // in the model output are converted to proper reasoning-* stream events,
-  // which the ThoughtWindow then displays. This works with any gateway model.
-  if (sendReasoning) {
-    model = wrapLanguageModel({
-      model,
-      middleware: extractReasoningMiddleware({ tagName: "thinking" }),
-    });
+  const modelId = config.raw.model;
+  const openaiApiKey = process.env[config.raw.env?.openaiApiKey ?? "OPENAI_API_KEY"];
+  if (!openaiApiKey) {
+    throw new Error(
+      `OpenAI API key env var ${config.raw.env?.openaiApiKey ?? "OPENAI_API_KEY"} is not set`,
+    );
   }
+
+  const openaiProvider = createOpenAI({ apiKey: openaiApiKey });
+  const model = openaiProvider(modelId);
 
   return new ToolLoopAgent({
     model,
-    instructions: buildSystemPrompt(config, contextParts, sendReasoning),
+    instructions: buildSystemPrompt(config, contextParts),
     allowSystemInMessages: true,
     tools,
     maxOutputTokens: config.raw.maxOutputTokens,
     stopWhen: stepCountIs(config.raw.maxRounds),
+    providerOptions: {
+      openai: {
+        parallelToolCalls: false,
+      },
+    },
   });
 }

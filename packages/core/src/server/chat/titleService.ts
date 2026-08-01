@@ -1,6 +1,6 @@
 
+import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, type UIMessage } from "ai";
-import { getLanguageModel, normalizeModelId } from "../model/resolveModel";
 import { chatRepository } from "../db/repositories/chatRepository";
 import { getDb } from "../db/adapterRegistry";
 import { redisLiveBus } from "../live/RedisLiveBus";
@@ -37,11 +37,11 @@ const TITLE_SYSTEM_PROMPT =
 async function generateTitle(
   contextText: string,
   modelId: string,
+  apiKey: string,
 ): Promise<string | null> {
-  const normalizedId = normalizeModelId(modelId);
-  const model = getLanguageModel(normalizedId);
+  const openai = createOpenAI({ apiKey });
   const { text } = await generateText({
-    model,
+    model: openai(modelId),
     system: TITLE_SYSTEM_PROMPT,
     prompt: contextText,
     maxOutputTokens: 20,
@@ -53,8 +53,10 @@ async function generateTitle(
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export interface ScheduleChatTitleOptions {
-  /** Model ID to use for title generation (e.g. "openai/gpt-4o-mini"). */
+  /** Model ID to use for title generation (e.g. "gpt-4o-mini"). */
   modelId?: string;
+  /** OpenAI API key. Falls back to `process.env.OPENAI_API_KEY`. */
+  apiKey?: string;
 }
 
 /**
@@ -78,9 +80,11 @@ export function scheduleChatTitleGeneration(
     const contextText = extractContextText(messages);
     if (!contextText.trim()) return;
 
-    const modelId = options.modelId ?? "openai/gpt-4o-mini";
+    const modelId = options.modelId ?? "gpt-4o-mini";
+    const apiKey =
+      options.apiKey ?? process.env.OPENAI_API_KEY ?? "";
 
-    const title = await generateTitle(contextText, modelId).catch(
+    const title = await generateTitle(contextText, modelId, apiKey).catch(
       (err) => {
         console.error("[titleService] generation failed:", err);
         return null;

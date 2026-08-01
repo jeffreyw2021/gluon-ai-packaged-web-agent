@@ -10,7 +10,6 @@ import { cancelAiChatJob, enqueueAiChatJob } from "../queue/queue";
 import { threadService } from "../thread/ThreadService";
 import { redisLiveBus } from "../live/RedisLiveBus";
 import { enqueueSend } from "./enqueueSend";
-import { loadConfig } from "../../config/loader";
 
 export type ChatCommand =
   | {
@@ -149,7 +148,7 @@ export class CommandService {
           parts: [{ type: "text", text: "" }],
         } as UIMessage),
       enqueuePersistedMessageCount: messages.length,
-      sendReasoning: await this.getConfigSendReasoning(),
+      sendReasoning: false,
       continueAfterApproval: true,
     });
 
@@ -218,7 +217,7 @@ export class CommandService {
           parts: [{ type: "text", text: "" }],
         } as UIMessage),
       enqueuePersistedMessageCount: messages.length,
-      sendReasoning: await this.getConfigSendReasoning(),
+      sendReasoning: false,
       continueAfterApproval: true,
     });
 
@@ -240,16 +239,6 @@ export class CommandService {
       runId: command.runId,
       acceptedAt: new Date().toISOString(),
     };
-  }
-
-  /** Load the config-level sendReasoning default (cached, near-zero cost). */
-  private async getConfigSendReasoning(): Promise<boolean> {
-    try {
-      const config = await loadConfig();
-      return config.raw.sendReasoning;
-    } catch {
-      return false;
-    }
   }
 }
 

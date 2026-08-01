@@ -7,8 +7,8 @@
   "properties": {
     "model": {
       "type": "string",
-      "default": "openai/gpt-4o",
-      "description": "Model ID in 'provider/model' format (e.g. 'openai/gpt-4o', 'anthropic/claude-sonnet-4.6', 'google/gemini-2.0-flash'). Bare IDs like 'gpt-4o' are treated as 'openai/gpt-4o' for backward compatibility."
+      "default": "gpt-4o",
+      "description": "OpenAI model ID to use for the agent."
     },
     "systemPrompt": {
       "type": "string",
@@ -67,11 +67,7 @@
     "sendReasoning": {
       "type": "boolean",
       "default": false,
-      "description": "Whether to stream reasoning tokens (chain-of-thought) to the client by default. Can also be set per-request by the client."
-    },
-    "reasoningModel": {
-      "type": "string",
-      "description": "Model to use when Think mode is active (sendReasoning: true). Must be a reasoning-capable model such as 'openai/o4-mini' or 'openai/o3'. Falls back to 'model' when not set."
+      "description": "Whether to stream reasoning tokens (chain-of-thought) to the client."
     },
     "suggestedPrompts": {
       "type": "array",
@@ -93,10 +89,10 @@
       "type": "object",
       "description": "Remap environment variable names if they differ from the defaults.",
       "properties": {
-        "gatewayApiKey": {
+        "openaiApiKey": {
           "type": "string",
-          "default": "VERCEL_AI_GATEWAY_API_KEY",
-          "description": "Name of the env var holding the Vercel AI Gateway API key."
+          "default": "OPENAI_API_KEY",
+          "description": "Name of the env var holding the OpenAI API key."
         },
         "databaseUrl": {
           "type": "string",

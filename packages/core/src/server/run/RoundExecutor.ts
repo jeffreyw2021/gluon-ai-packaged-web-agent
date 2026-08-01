@@ -80,7 +80,7 @@ export async function executeRound(
   }
 
   const agentMessages = prepareUiMessagesForAgent(previousMessages);
-  const agent = await createAgent(input.loadedConfig, { sendReasoning: input.sendReasoning });
+  const agent = await createAgent(input.loadedConfig);
 
   let finishReason = "stop";
   const roundUsage: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
