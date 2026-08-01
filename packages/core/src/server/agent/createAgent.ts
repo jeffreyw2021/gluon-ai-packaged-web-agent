@@ -1,6 +1,5 @@
 
-import { ToolLoopAgent, stepCountIs, tool } from "ai";
-import type { ToolSet } from "ai";
+import { ToolLoopAgent, stepCountIs, tool, type ToolSet, type JSONValue } from "ai";
 import { z } from "zod";
 import type { LoadedConfig } from "../../config/loader";
 import { resolveLanguageModel } from "../model/registry";
@@ -30,6 +29,15 @@ function buildSystemPrompt(config: LoadedConfig, contextParts: string[]): string
       config.skills
         .map((_, i) => `- Index ${i}: Skill document ${i + 1}`)
         .join("\n");
+  }
+
+  if (config.raw.sendReasoning) {
+    prompt +=
+      "\n\n## Reasoning\n" +
+      "Before responding, think through the problem carefully in your reasoning space: " +
+      "understand what is being asked, consider relevant constraints and context, reason through " +
+      "the best approach, and verify your plan before writing your final answer. " +
+      "When selecting or calling tools, reason about which tool fits the task and why.";
   }
 
   return prompt;
@@ -75,6 +83,22 @@ export async function createAgent(config: LoadedConfig) {
 
   const model = resolveLanguageModel(config.raw.model, config.raw.env);
 
+  // Build provider-specific reasoning options when sendReasoning is enabled.
+  // Only reasoning-capable models emit reasoning tokens; for others these options
+  // are silently ignored or produce a graceful SDK error.
+  const providerOptions: Record<string, Record<string, JSONValue | undefined>> = {};
+  if (config.raw.sendReasoning) {
+    const m = config.raw.model;
+    if (/^(openai\/o|gateway\/openai\/o)/i.test(m)) {
+      // OpenAI o-series (o1, o3, o4-mini, …): enable reasoning effort
+      providerOptions["openai"] = { reasoningEffort: "medium" };
+    } else if (/^(anthropic\/|gateway\/anthropic\/)/i.test(m)) {
+      // Anthropic extended thinking (claude-3.7+): allocate up to 60% of token budget
+      const budgetTokens = Math.min(Math.floor(config.raw.maxOutputTokens * 0.6), 10000);
+      providerOptions["anthropic"] = { thinking: { type: "enabled", budgetTokens } };
+    }
+  }
+
   return new ToolLoopAgent({
     model,
     instructions: buildSystemPrompt(config, contextParts),
@@ -82,5 +106,6 @@ export async function createAgent(config: LoadedConfig) {
     tools,
     maxOutputTokens: config.raw.maxOutputTokens,
     stopWhen: stepCountIs(config.raw.maxRounds),
+    ...(Object.keys(providerOptions).length > 0 ? { providerOptions } : {}),
   });
 }

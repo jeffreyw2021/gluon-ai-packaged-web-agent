@@ -66,8 +66,8 @@
     },
     "sendReasoning": {
       "type": "boolean",
-      "default": false,
-      "description": "Whether to stream reasoning tokens (chain-of-thought) to the client."
+      "default": true,
+      "description": "Stream reasoning/thinking tokens to the client ThoughtWindow. Requires a reasoning-capable model: OpenAI o-series (o3, o4-mini, …) or Anthropic claude-3.7+. Has no effect on standard models like gpt-4o (which do not emit reasoning tokens)."
     },
     "suggestedPrompts": {
       "type": "array",

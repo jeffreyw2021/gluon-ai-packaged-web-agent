@@ -56,7 +56,7 @@ export const AgentConfigSchema = z.object({
   worker: z.boolean().default(true),
   workerConcurrency: z.number().int().positive().default(5),
 
-  sendReasoning: z.boolean().default(false),
+  sendReasoning: z.boolean().default(true),
 
   suggestedPrompts: z.array(z.string()).optional().default([]),
 
