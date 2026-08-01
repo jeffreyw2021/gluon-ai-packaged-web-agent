@@ -110,19 +110,22 @@ Provider + top bar + messages + input, with built-in styles.
 ```tsx
 import { GluonAgentPanel } from "gluon-ai/react";
 
-<GluonAgentPanel
-  basePath="/api/gluon-ai"   // default
-  darkMode
-  frostedGlass
-  // suggestedPrompts={["…"]}  // optional; otherwise loaded from GET {basePath}/config
-  // actionBlocks={{ my_tool: MyToolBlock }}
-  // topBar={{ showChatHistory: true }}
-  // messageList={{ autoScroll: true }}
-  // inputBar={{ placeholder: "Ask anything…" }}
-/>
+<GluonAgentPanel basePath="/api/gluon-ai" />
 ```
 
-Useful props: `darkMode`, `frostedGlass`, `basePath`, `actionBlocks`, `suggestedPrompts`, `style` / `className`, and nested `topBar` / `messageList` / `inputBar` overrides. Pass `children` to replace the default body while keeping `AgentProvider`.
+`basePath` defaults to `"/api/gluon-ai"` and can be omitted.
+
+| Prop | Description |
+| ---- | ----------- |
+| `basePath` | API route prefix (default `"/api/gluon-ai"`) |
+| `darkMode` | Dark palette for the shell and Layer 2 children |
+| `frostedGlass` | Blur + translucent shell instead of a solid background |
+| `suggestedPrompts` | Empty-state chips; omit to load from `GET {basePath}/config` |
+| `actionBlocks` | Map of tool name → React component for in-stream UI |
+| `queryClient` | Share an existing TanStack Query client |
+| `style` / `className` | Applied to the outermost shell |
+| `topBar` / `messageList` / `inputBar` | Prop overrides forwarded to each Layer 2 child (`darkMode` stays controlled by the panel) |
+| `children` | Replace the default body while keeping `AgentProvider` |
 
 ### 2. Compose — Layer 2 pieces
 
@@ -136,20 +139,22 @@ import {
   ChatInputBar,
 } from "gluon-ai/react";
 
-export function AgentSidebar() {
-  return (
-    <AgentProvider basePath="/api/gluon-ai">
-      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <ChatTopBar />
-        <ChatMessageList autoScroll />
-        <ChatInputBar placeholder="Ask anything…" />
-      </div>
-    </AgentProvider>
-  );
-}
+<AgentProvider basePath="/api/gluon-ai">
+  <ChatTopBar />
+  <ChatMessageList />
+  <ChatInputBar />
+</AgentProvider>
 ```
 
-Each Layer 2 component reads from context — no data props required.
+Each Layer 2 component reads from context — no data props required. Lay them out however you want (flex column, sidebar, etc.).
+
+**`AgentProvider`:** `basePath`, `actionBlocks`, `suggestedPrompts`, `queryClient`.
+
+**`ChatTopBar`:** `showReasoningPills`, `showChatHistory`, `onNewChat`, `slots.newChatButton`, `style` / `className` / `styles`, `darkMode`.
+
+**`ChatMessageList`:** `autoScroll`, `emptyView`, `skeleton`, `slots` (`userMessage`, `assistantMessage`, `thoughtWindow`, `textContent`), `style` / `className` / `styles`, `darkMode`.
+
+**`ChatInputBar`:** `placeholder`, `disclaimer`, `attach`, `voice`, `slots.sendButton`, `style` / `className` / `styles`, `darkMode`.
 
 ### 3. Headless — `AgentPanel`
 
@@ -163,8 +168,17 @@ import { AgentProvider, AgentPanel } from "gluon-ai/react";
 </AgentProvider>
 ```
 
-Style via your own CSS targeting `[data-slot="…"]`, or pass `classNames` / `styles` / render props (`renderHeader`, `renderSidebar`, `messageComponents`, …).
+Style via your own CSS targeting `[data-slot="…"]` (`agent-panel`, `sidebar`, `main`, `header`, `body`, `input`).
 
+| Prop | Description |
+| ---- | ----------- |
+| `showSidebar` | Show/hide the sidebar slot (default `true`) |
+| `renderSidebar` / `renderHeader` | Custom render functions for those slots |
+| `messageComponents` | Override message list sub-components |
+| `suggestedPrompts` | Empty-state chips |
+| `attachments` | Pass `useAttachments()` to enable file attach + clear-on-send |
+| `className` / `style` | Root element |
+| `classNames` / `styles` | Per-slot class and style maps |
 ### Other exports
 
 Hooks (`useAgentContext`, `useAgentAdapter`, `useChatInput`, `useChatList`, `useAttachments`, …), message primitives (`MessageList`, `UserMessage`, `AssistantMessage`, `ThoughtWindow`, …), and headless buttons (`SendButton`, `StopButton`, `AttachButton`, …) are all available from `gluon-ai/react` when you want a fully custom shell.
