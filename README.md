@@ -156,32 +156,61 @@ Each Layer 2 component reads from context — no data props required. Lay them o
 
 **`ChatInputBar`:** `placeholder`, `disclaimer`, `attach`, `voice`, `slots.sendButton`, `style` / `className` / `styles`, `darkMode`.
 
-### 3. Headless — `AgentPanel`
+### 3. Headless — assemble your own
 
-Structural slots only (`data-slot` attributes), no built-in CSS. Full control over look and feel:
+Wrap your UI in `AgentProvider`, then compose any exports from `gluon-ai/react` however you like:
 
 ```tsx
-import { AgentProvider, AgentPanel } from "gluon-ai/react";
+import { AgentProvider } from "gluon-ai/react";
 
 <AgentProvider basePath="/api/gluon-ai">
-  <AgentPanel />
+  {/* anything from gluon goes here — assemble as you like; see below */}
 </AgentProvider>
 ```
 
-Style via your own CSS targeting `[data-slot="…"]` (`agent-panel`, `sidebar`, `main`, `header`, `body`, `input`).
+**Panel / layout**
 
-| Prop | Description |
-| ---- | ----------- |
-| `showSidebar` | Show/hide the sidebar slot (default `true`) |
-| `renderSidebar` / `renderHeader` | Custom render functions for those slots |
-| `messageComponents` | Override message list sub-components |
-| `suggestedPrompts` | Empty-state chips |
-| `attachments` | Pass `useAttachments()` to enable file attach + clear-on-send |
-| `className` / `style` | Root element |
-| `classNames` / `styles` | Per-slot class and style maps |
-### Other exports
+| Export | Description |
+| ------ | ----------- |
+| `AgentPanel` | Headless skeleton with `data-slot` regions (`agent-panel`, `sidebar`, `main`, `header`, `body`, `input`). No built-in CSS — style via CSS or `classNames` / `styles` / render props |
+| `ChatList` / `ChatListItem` | Chat history list + single row |
 
-Hooks (`useAgentContext`, `useAgentAdapter`, `useChatInput`, `useChatList`, `useAttachments`, …), message primitives (`MessageList`, `UserMessage`, `AssistantMessage`, `ThoughtWindow`, …), and headless buttons (`SendButton`, `StopButton`, `AttachButton`, …) are all available from `gluon-ai/react` when you want a fully custom shell.
+**Messages**
+
+| Export | Description |
+| ------ | ----------- |
+| `MessageList` | Scrollable message thread (user + assistant turns) |
+| `UserMessage` | User bubble |
+| `AssistantMessage` | Assistant bubble (text, tools, slots) |
+| `ThoughtWindow` | Reasoning / tool-progress panel |
+| `ConfirmationBlock` | Approval UI when a tool needs confirmation |
+| `ActionBlockSlot` | Renders a registered action-block component for a tool |
+
+**Input**
+
+| Export | Description |
+| ------ | ----------- |
+| `ChatInput` | Headless composer (textarea + wiring for send/stop/attach) |
+| `SendButton` / `StopButton` | Send and cancel-run controls |
+| `AttachButton` | File attach control |
+| `RecordButton` / `TranscribeButton` | Voice record / speech-to-text controls |
+| `RecordingIndicator` / `LiveTranscript` | Recording state + live transcript display |
+| `AttachmentChip` | Chip for an attached file |
+
+**Hooks** (use inside `AgentProvider`)
+
+| Export | Description |
+| ------ | ----------- |
+| `useAgentContext` | `adapter`, `basePath`, `actionBlocks`, `suggestedPrompts`, `toolUi` |
+| `useAgentAdapter` | Session/run adapter (messages, send, stop, live events) |
+| `useChatInput` | Controlled composer state |
+| `useChatList` | List / create / switch chats |
+| `useAttachments` | File attachment state for the composer |
+| `useReasoningMode` | Simple / Auto / Think mode |
+| `useRecorder` / `useSpeechTranscriber` | Mic recording + transcription |
+| `useFileExtraction` / `useComposerActions` | File text extraction + composer action helpers |
+
+Layer 2 components (`ChatTopBar`, `ChatMessageList`, `ChatInputBar`) and `GluonAgentPanel` are also importable here if you want to mix styled pieces with custom layout.
 
 ---
 
