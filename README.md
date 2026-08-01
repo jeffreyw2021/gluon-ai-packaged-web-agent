@@ -37,19 +37,13 @@ npm install gluon-ai@beta
 Put secrets in `.env` / `.env.local` **before** init (the wizard detects existing names):
 
 ```env
-# Required for the default openai/gpt-4o model:
 OPENAI_API_KEY=sk-...
-
-# Add keys for other providers as needed — see AI model providers below
-# ANTHROPIC_API_KEY=sk-ant-...
-# GOOGLE_GENERATIVE_AI_API_KEY=AIza...
-# etc. providers...
-
-# VERCEL_AI_GATEWAY_API_KEY=...    # enables the vercel gateway/ model prefix
 
 AGENT_DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
 REDIS_URL=redis://localhost:6379
 ```
+
+> OpenAI works out of the box. For other providers see [AI model providers](#ai-model-providers).
 
 ```bash
 npx gluon-ai init          # interactive
@@ -364,63 +358,62 @@ Full schema: `[packages/core/agent.config.schema.json](packages/core/agent.confi
 
 ## AI model providers
 
-Gluon uses the [Vercel AI SDK](https://ai-sdk.dev) provider registry. The `model` field in `agent.config.json` is a `provider/model` string — the prefix determines which provider is used.
+Set `model` in `agent.config.json` to a `provider/model` string. The prefix selects the provider; everything else is the model ID.
 
-### Direct (BYOK — Bring Your Own Key)
+### OpenAI (included — no extra steps)
 
-Install only the provider packages you need. `@ai-sdk/openai` ships with gluon; all others are optional.
+`@ai-sdk/openai` ships with gluon. Set the key and pick a model:
 
-
-| Prefix      | Install                   | Env var                        |
-| ----------- | ------------------------- | ------------------------------ |
-| `openai`    | *(included)*              | `OPENAI_API_KEY`               |
-| `anthropic` | `npm i @ai-sdk/anthropic` | `ANTHROPIC_API_KEY`            |
-| `google`    | `npm i @ai-sdk/google`    | `GOOGLE_GENERATIVE_AI_API_KEY` |
-| `mistral`   | `npm i @ai-sdk/mistral`   | `MISTRAL_API_KEY`              |
-| `groq`      | `npm i @ai-sdk/groq`      | `GROQ_API_KEY`                 |
-| `xai`       | `npm i @ai-sdk/xai`       | `XAI_API_KEY`                  |
-| `deepseek`  | `npm i @ai-sdk/deepseek`  | `DEEPSEEK_API_KEY`             |
-
-
-Examples:
+```env
+OPENAI_API_KEY=sk-...
+```
 
 ```json
 { "model": "openai/o4-mini" }
-{ "model": "anthropic/claude-sonnet-4.6" }
-{ "model": "google/gemini-2.0-flash" }
-{ "model": "groq/llama-3.3-70b-versatile" }
 ```
 
-A provider is registered automatically if its package is installed **and** its key env var is set. Missing either → that prefix is silently skipped.
+### Other providers
 
-Bare model IDs (e.g. `"gpt-4o"`) are normalized to `"openai/gpt-4o"` for backward compatibility.
+For any other provider, set its API key **and** install its optional SDK package. Gluon detects both at startup and registers the provider automatically — no code changes needed.
 
-### Via Vercel AI Gateway
+| Provider   | Model prefix | Env var                        | Install                   |
+| ---------- | ------------ | ------------------------------ | ------------------------- |
+| Anthropic  | `anthropic`  | `ANTHROPIC_API_KEY`            | `npm i @ai-sdk/anthropic` |
+| Google     | `google`     | `GOOGLE_GENERATIVE_AI_API_KEY` | `npm i @ai-sdk/google`    |
+| Mistral    | `mistral`    | `MISTRAL_API_KEY`              | `npm i @ai-sdk/mistral`   |
+| Groq       | `groq`       | `GROQ_API_KEY`                 | `npm i @ai-sdk/groq`      |
+| xAI        | `xai`        | `XAI_API_KEY`                  | `npm i @ai-sdk/xai`       |
+| DeepSeek   | `deepseek`   | `DEEPSEEK_API_KEY`             | `npm i @ai-sdk/deepseek`  |
 
-Prefix any model string with `gateway/` to route it through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) instead of calling the provider directly. One key, hundreds of models, no extra packages needed.
+Example after installing and setting the key:
+
+```json
+{ "model": "anthropic/claude-sonnet-4.6" }
+```
+
+If a provider's package is missing or its key is not set, that prefix is silently skipped — no error, just unavailable.
+
+### Via Vercel AI Gateway (optional — skips per-provider packages)
+
+Prefix any model string with `gateway/` to route through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). One key covers every supported model — no per-provider packages needed.
 
 ```env
 AI_GATEWAY_API_KEY=your_gateway_key
 ```
 
 ```json
-{ "model": "gateway/openai/gpt-4o" }
 { "model": "gateway/anthropic/claude-sonnet-4.6" }
 { "model": "gateway/google/gemini-2.0-flash" }
 ```
 
-The `gateway` prefix is registered automatically when `AI_GATEWAY_API_KEY` is set. No additional packages required — `createGateway` ships inside the `ai` package.
-
 ### Custom env var names
 
-If your key is stored under a different name, remap it in `env`:
+If your key is stored under a different name, remap it:
 
 ```json
 {
   "model": "anthropic/claude-sonnet-4.6",
-  "env": {
-    "anthropicApiKey": "MY_CLAUDE_KEY"
-  }
+  "env": { "anthropicApiKey": "MY_CLAUDE_KEY" }
 }
 ```
 
