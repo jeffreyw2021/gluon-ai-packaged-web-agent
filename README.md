@@ -1,4 +1,4 @@
-# Gluon-ai
+# Gluon-AI
 
 > **Beta** project, rough edges expected.
 
@@ -23,8 +23,6 @@ Built for myself. Shared in case it's useful.
 
 
 ---
-
-
 
 ## Quick start
 
@@ -59,20 +57,18 @@ That's enough for a working agent with web search, multi-chat, streaming, and th
 
 ---
 
-
-
 ## What init scaffolds
 
 
-| Path                        | Purpose                                                                |
-| --------------------------- | ---------------------------------------------------------------------- |
-| `agent.config.json`         | Model, tools, auth, prompts, env remaps                                |
-| `agent/package.json`        | `{ "type": "module" }` — silences Node ESM warnings when loading tools |
-| `agent/system-prompt.md`    | Default system prompt (edit this freely)                               |
+| Path                        | Purpose                                                                                |
+| --------------------------- | -------------------------------------------------------------------------------------- |
+| `agent.config.json`         | Model, tools, auth, prompts, env remaps                                                |
+| `agent/package.json`        | `{ "type": "module" }` — silences Node ESM warnings when loading tools                 |
+| `agent/system-prompt.md`    | Default system prompt (edit this freely)                                               |
 | `agent/tools/webSearch.ts`  | Example tool (OpenAI-native web search — requires `OPENAI_API_KEY` + `@ai-sdk/openai`) |
-| `agent/context/datetime.ts` | Example context provider (current date/time)                           |
-| `[app                       | src/app]/api/gluon-ai/[[...path]]/route.ts`                            |
-| `instrumentation.ts`        | Starts the BullMQ worker on Next.js boot                               |
+| `agent/context/datetime.ts` | Example context provider (current date/time)                                           |
+| `[app                       | src/app]/api/gluon-ai/[[...path]]/route.ts`                                            |
+| `instrumentation.ts`        | Starts the BullMQ worker on Next.js boot                                               |
 
 
 Also:
@@ -100,8 +96,6 @@ instrumentation.ts
 > **Local package development:** if you're linking a `file:` copy of gluon into an app and Turbopack can't resolve subpath exports, use `npx gluon-ai init --default --development` (or `npx gluon-ai install --development`). That reinstalls with `--install-links` so deps are copied into `node_modules` instead of symlinked.
 
 ---
-
-
 
 ## Frontend — four layers of UI
 
@@ -131,8 +125,6 @@ import { GluonAgentPanel } from "gluon-ai/react";
 | `style` / `className`                 | Applied to the outermost shell                               |
 | `topBar` / `messageList` / `inputBar` | Prop overrides forwarded to each Layer 3 child               |
 | `children`                            | Replace the default body while keeping `AgentProvider`       |
-
-
 
 
 ### 2. Styled atoms — Layer 2
@@ -203,8 +195,6 @@ All atoms read from `AgentProvider` — no data props required. Only pass props 
 | `MicButton`              | Styled mic toggle; share a `transcriber` instance with `TranscriptionIndicator`         |
 | `TranscriptionIndicator` | Pulsing dot + live transcript text; requires a shared `transcriber` prop                |
 | `SendButton`             | Styled send/stop toggle; wires `adapter` automatically                                  |
-
-
 
 
 ### 3. Compose regions — Layer 3
@@ -297,8 +287,6 @@ import { AgentProvider } from "gluon-ai/react";
 
 ---
 
-
-
 ## Configure the agent (`agent.config.json`)
 
 ```json
@@ -349,8 +337,6 @@ Full schema: `[packages/core/agent.config.schema.json](packages/core/agent.confi
 
 ---
 
-
-
 ## AI model providers
 
 Set `model` in `agent.config.json` to a `provider/model` string. The prefix selects the provider; everything else is the model ID.
@@ -367,6 +353,7 @@ For each provider, set its API key **and** install its optional SDK package. Glu
 | Groq      | `groq`       | `GROQ_API_KEY`                 | `npm i @ai-sdk/groq`      |
 | xAI       | `xai`        | `XAI_API_KEY`                  | `npm i @ai-sdk/xai`       |
 | DeepSeek  | `deepseek`   | `DEEPSEEK_API_KEY`             | `npm i @ai-sdk/deepseek`  |
+
 
 All provider packages are optional. If a provider's package is missing or its key is not set, that prefix is silently skipped — no error, just unavailable.
 
@@ -401,8 +388,6 @@ AI_GATEWAY_API_KEY=your_gateway_key
 { "model": "gateway/google/gemini-2.0-flash" }
 ```
 
-
-
 ### Custom env var names
 
 If your key is stored under a different name, remap it:
@@ -416,11 +401,7 @@ If your key is stored under a different name, remap it:
 
 ---
 
-
-
 ## Tools
-
-
 
 ### Default behaviour (no tools configured)
 
@@ -432,8 +413,6 @@ Three built-in tools are always available, regardless of what you configure:
 | `discover_tools`       | Agent calls this automatically before using any custom tool for the first time to read descriptions and parameter signatures |
 | `request_confirmation` | Called when a tool has `needsApproval: true` — pauses the run and shows a confirmation card in the UI                        |
 | `read_skill`           | Added automatically when `skills` is non-empty — lets the agent load a skill document on demand                              |
-
-
 
 
 ### Defining a tool
@@ -480,8 +459,6 @@ All `defineTool` fields:
 | `ui.icon`           | No       | Lucide icon name for the ThoughtWindow row (e.g. `"Globe"`, `"FileText"`) — defaults to `"Settings"` |
 
 
-
-
 ### Human approval
 
 Set `needsApproval: true` (or a function that inspects the input and returns `true`) to pause the run before the tool executes. The user sees a confirmation card in the chat; if they approve the tool runs, if they reject the run stops.
@@ -502,11 +479,7 @@ npx gluon-ai add-tool my_tool
 
 ---
 
-
-
 ## Skills
-
-
 
 ### What skills are
 
@@ -559,11 +532,7 @@ Use **skills** for large reference material that is only sometimes needed. Use *
 
 ---
 
-
-
 ## Context providers
-
-
 
 ### What context providers do
 
@@ -602,8 +571,6 @@ List any number of files; each one contributes a line to the `## Context` block:
 }
 ```
 
-
-
 ### Accessing external data
 
 Context providers are regular async functions — you can fetch from your DB, call an API, or read environment variables:
@@ -622,11 +589,7 @@ export default async function (): Promise<string> {
 
 ---
 
-
-
 ## Auth
-
-
 
 ### Default behaviour (no config needed)
 
@@ -661,8 +624,6 @@ export default async function (req: Request): Promise<string | boolean | null> {
 }
 ```
 
-
-
 ### What the userId controls
 
 Once a userId is returned, Gluon:
@@ -670,8 +631,6 @@ Once a userId is returned, Gluon:
 - **Scopes all chat sessions** to that userId — users only see their own chat history.
 - **Scopes all run records** to that userId — billing, rate-limiting, and logs are per-user.
 - Passes the userId to **lifecycle hooks** (`onRunStart`, `onRunEnd`, `onRunError`) so you can record usage, enforce rate limits, or trigger billing per user.
-
-
 
 ### Role-based access
 
@@ -691,11 +650,7 @@ export default async function (req: Request) {
 
 ---
 
-
-
 ## Action blocks (in-stream UI)
-
-
 
 ### What action blocks do
 
@@ -726,15 +681,13 @@ export default function MyToolBlock({ toolInput, toolOutput, state }: ActionBloc
 All `ActionBlockProps` fields:
 
 
-| Prop         | Type                                     | Description                                                                 |
-| ------------ | ---------------------------------------- | --------------------------------------------------------------------------- |
-| `toolInput`  | `unknown`                                | The validated input the agent passed to the tool                            |
-| `toolOutput` | `unknown`                                | The value returned by `execute` (undefined while the tool is still running) |
-| `toolName`   | `string`                                 | The registered tool name (e.g. `"my_tool"`)                                 |
-| `messageId`  | `string`                                 | ID of the assistant message this block belongs to                           |
-| `state`      | `"call"` | `"result"` | `"partial-call"` | Lifecycle state: `"call"` while running, `"result"` after                   |
-
-
+| Prop         | Type      | Description                                                                 |
+| ------------ | --------- | --------------------------------------------------------------------------- |
+| `toolInput`  | `unknown` | The validated input the agent passed to the tool                            |
+| `toolOutput` | `unknown` | The value returned by `execute` (undefined while the tool is still running) |
+| `toolName`   | `string`  | The registered tool name (e.g. `"my_tool"`)                                 |
+| `messageId`  | `string`  | ID of the assistant message this block belongs to                           |
+| `state`      | `"call"`  | `"result"`                                                                  |
 
 
 ### Wiring the component to the client
@@ -753,11 +706,7 @@ import MyToolBlock from "@/agent/blocks/MyToolBlock";
 
 ---
 
-
-
 ## Token usage & lifecycle hooks
-
-
 
 ### Default behaviour
 
@@ -825,8 +774,6 @@ export function TokenCounter() {
 
 ---
 
-
-
 ## CLI reference
 
 ```text
@@ -858,8 +805,6 @@ npm run gluon:uninstall
 
 ---
 
-
-
 ## Package exports
 
 
@@ -878,8 +823,6 @@ API surface under the catch-all (last path segment): `events`, `thread`, `chats`
 
 ---
 
-
-
 ## Currently working on
 
 - Framework portability beyond Next.js
@@ -888,8 +831,6 @@ API surface under the catch-all (last path segment): `events`, `thread`, `chats`
 - Stability, tests, and multi-DB edge cases
 
 ---
-
-
 
 ## License
 
