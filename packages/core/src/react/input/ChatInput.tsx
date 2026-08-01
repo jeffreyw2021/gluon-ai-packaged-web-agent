@@ -1,6 +1,6 @@
 "use client";
 
-import React, { type CSSProperties } from "react";
+import React, { useImperativeHandle, type CSSProperties } from "react";
 import type { RunPhase } from "../../types/RunPhase";
 import { useChatInput } from "../hooks/useChatInput";
 
@@ -55,6 +55,21 @@ export interface ChatInputProps {
 }
 
 /**
+ * Imperative handle exposed when a `ref` is forwarded to `ChatInput`.
+ * Use this to trigger actions that are normally driven by internal events.
+ */
+export interface ChatInputHandle {
+  /**
+   * Re-measure and apply auto-grow to the textarea.
+   *
+   * Call this after the textarea transitions from `display:none` to visible
+   * (e.g. when a voice-input overlay is dismissed) so the height reflects the
+   * current content rather than being stuck at 0.
+   */
+  autoGrow: () => void;
+}
+
+/**
  * Headless chat input. Wires textarea auto-grow, Enter-to-send, and
  * send/stop logic — zero built-in styles. Apply your own via
  * `className`, `style`, `classNames`, `styles`, or override the submit
@@ -62,58 +77,64 @@ export interface ChatInputProps {
  *
  * `data-slot="chat-input"` on the root `<form>`.
  * `data-active="true"` on the root `<form>` when a run is in progress.
+ *
+ * Forward a `ref` to get access to `ChatInputHandle.autoGrow()`.
  */
-export function ChatInput({
-  value,
-  onChange,
-  onSend,
-  onStop,
-  runPhase,
-  placeholder = "Message…",
-  disabled = false,
-  hasAttachments = false,
-  className,
-  style,
-  classNames = {},
-  styles = {},
-  renderSubmitButton,
-}: ChatInputProps) {
-  const { isActive, canSend, textareaRef, handleChange, handleKeyDown, handleSubmit } =
-    useChatInput({ value, onChange, onSend, onStop, runPhase, hasAttachments });
+export const ChatInput = React.forwardRef<ChatInputHandle, ChatInputProps>(
+  function ChatInput({
+    value,
+    onChange,
+    onSend,
+    onStop,
+    runPhase,
+    placeholder = "Message…",
+    disabled = false,
+    hasAttachments = false,
+    className,
+    style,
+    classNames = {},
+    styles = {},
+    renderSubmitButton,
+  }: ChatInputProps, ref) {
+    const { isActive, canSend, textareaRef, handleChange, handleKeyDown, handleSubmit, autoGrow } =
+      useChatInput({ value, onChange, onSend, onStop, runPhase, hasAttachments });
 
-  return (
-    <form
-      data-slot="chat-input"
-      onSubmit={handleSubmit}
-      data-active={isActive ? "true" : undefined}
-      className={className ?? classNames.root}
-      style={style ?? styles.root}
-    >
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        disabled={disabled || isActive}
-        rows={1}
-        aria-label="Message input"
-        className={classNames.textarea}
-        style={styles.textarea}
-      />
-      {renderSubmitButton ? (
-        renderSubmitButton({ isActive, canSend })
-      ) : (
-        <button
-          type="submit"
-          disabled={disabled || (!isActive && !canSend)}
-          aria-label={isActive ? "Stop" : "Send"}
-          className={classNames.submitButton}
-          style={styles.submitButton}
-        >
-          {isActive ? "■" : "↑"}
-        </button>
-      )}
-    </form>
-  );
-}
+    useImperativeHandle(ref, () => ({ autoGrow }), [autoGrow]);
+
+    return (
+      <form
+        data-slot="chat-input"
+        onSubmit={handleSubmit}
+        data-active={isActive ? "true" : undefined}
+        className={className ?? classNames.root}
+        style={style ?? styles.root}
+      >
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          disabled={disabled || isActive}
+          rows={1}
+          aria-label="Message input"
+          className={classNames.textarea}
+          style={styles.textarea}
+        />
+        {renderSubmitButton ? (
+          renderSubmitButton({ isActive, canSend })
+        ) : (
+          <button
+            type="submit"
+            disabled={disabled || (!isActive && !canSend)}
+            aria-label={isActive ? "Stop" : "Send"}
+            className={classNames.submitButton}
+            style={styles.submitButton}
+          >
+            {isActive ? "■" : "↑"}
+          </button>
+        )}
+      </form>
+    );
+  }
+);

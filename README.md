@@ -152,7 +152,7 @@ Drop `<AgentPanel />` anywhere inside `<AgentProvider>` and style it however you
 ```json
 {
   "model": "gpt-4o",
-  "systemPrompt": "You are a helpful assistant.",
+  "systemPrompt": "./agent/system-prompt.md",
   "maxOutputTokens": 16384,
   "maxRounds": 25,
   "tools": {

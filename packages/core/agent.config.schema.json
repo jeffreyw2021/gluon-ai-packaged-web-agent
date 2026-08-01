@@ -13,8 +13,8 @@
     },
     "systemPrompt": {
       "type": "string",
-      "default": "You are a helpful assistant.",
-      "description": "System prompt string OR a relative path to a .md/.txt file."
+      "default": "./agent/system-prompt.md",
+      "description": "System prompt string OR a relative path to a .md/.txt file (init scaffolds ./agent/system-prompt.md)."
     },
     "maxOutputTokens": {
       "type": "integer",
@@ -41,6 +41,12 @@
     "skills": {
       "type": "array",
       "description": "Array of relative paths to Markdown skill documents the agent can read via read_skill.",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "context": {
+      "type": "array",
+      "description": "Array of relative paths to .ts files that each export a default async function () => Promise<string>. Gluon calls every provider fresh on each agent request and injects the returned strings into the system prompt under a '## Context' block. Use this for dynamic runtime information such as the current date/time, active user data, or environment state.",
       "items": { "type": "string" },
       "default": []
     },

@@ -93,16 +93,16 @@ export function useComposerActions({
     if (!transcriber) return;
 
     if (transcriber.listening) {
-      transcriber.stop();
-      if (transcriber.transcript.trim()) {
+      // commitAndReset() reads from refs that are updated synchronously inside
+      // onresult — never stale, even if React hasn't flushed pending state updates.
+      // It also stops the recognizer and clears state atomically.
+      const combined = transcriber.commitAndReset();
+      if (combined) {
         const current = adapter.composer.inputText;
         adapter.composer.setInputText(
-          current.trim()
-            ? `${current.trim()} ${transcriber.transcript.trim()}`
-            : transcriber.transcript.trim(),
+          current.trim() ? `${current.trim()} ${combined}` : combined,
         );
       }
-      transcriber.reset();
     } else {
       transcriber.reset();
       transcriber.start();

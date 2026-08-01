@@ -158,7 +158,9 @@ function buildDefaults(scan: ScanResult): Answers {
           (k) => k.includes("REDIS") || k.includes("UPSTASH"),
         ) ?? "REDIS_URL"),
     model: "gpt-4o",
-    systemPrompt: "You are a helpful assistant.",
+    // Points at the markdown file scaffolded by init — easier to edit than
+    // an inline JSON string, and keeps a richer default prompt out of agent.config.json.
+    systemPrompt: "./agent/system-prompt.md",
     apiBasePath: "/api/gluon-ai",
     dbMode: "prisma",
     dbProvider: "postgresql",
@@ -583,6 +585,11 @@ function configTemplate(answers: Answers): string {
     },
     actionBlocks: {},
     skills: [],
+    // Each entry is a relative path to a .ts file that exports a default
+    // async function () => Promise<string>.  Gluon calls it fresh on every
+    // request and injects the result into the system prompt under ## Context.
+    // Remove or add entries to control what dynamic context the agent receives.
+    context: ["./agent/context/datetime.ts"],
     auth: {
       // "allow" (default) — all requests pass, userId = "anon". Good for dev / single-user.
       // "deny"            — all requests rejected with 401.
@@ -619,6 +626,59 @@ export const dynamic = "force-dynamic";
 
 function instrumentationTemplate(): string {
   return `export { register } from "gluon-ai/instrumentation";\n`;
+}
+
+function systemPromptTemplate(): string {
+  return `# Role
+
+You are a capable AI assistant embedded in a web application. Help the user accomplish their goals clearly, accurately, and efficiently.
+
+# How you work
+
+- Prefer concrete, actionable answers over vague advice.
+- When information may be outdated or time-sensitive, use available tools (such as web search) rather than guessing from memory.
+- Treat any injected **Context** block as ground truth for this request (e.g. current date/time or app state). Use it; do not contradict it.
+- For multi-step work: state a brief plan, execute, then summarize what you did and what the user should know next.
+- If the request is ambiguous in a way that would change the outcome, ask one focused clarifying question instead of assuming.
+
+# Communication
+
+- Be concise by default; go deeper when the task needs it or the user asks.
+- Prefer short paragraphs and lists over long walls of text.
+- When you use tool or search results, cite sources (titles/URLs) when they are available.
+- If you cannot do something, a tool fails, or you lack access, say so plainly and suggest a practical next step.
+
+# Integrity
+
+- Never invent tool results, URLs, citations, or data you did not receive.
+- Do not claim access to systems, accounts, or private data you do not have.
+- Distinguish clearly between what you know, what you inferred, and what came from a tool.
+`;
+}
+
+function datetimeContextTemplate(): string {
+  return `// Context provider — injects the current date/time into the agent's system prompt.
+// Called fresh on every request so the value is always up to date.
+//
+// To add more context providers:
+//   1. Create a new .ts file in agent/context/ that exports a default async function.
+//   2. Add its path to the "context" array in agent.config.json.
+//
+// The return value is appended under a "## Context" section in the system prompt.
+
+export default async function (): Promise<string> {
+  const now = new Date();
+  return \`Current date and time: \${now.toLocaleString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  })}\`;
+}
+`;
 }
 
 function webSearchTool(): string {
@@ -854,8 +914,14 @@ export async function initCommand(
   // 2. agent.config.json  (auth.getUserId uses a built-in strategy string — no file needed)
   write(path.join(root, "agent.config.json"), configTemplate(answers));
 
-  // 4. Web search tool (default example — DuckDuckGo Lite, no API key required)
+  // 3. Default system prompt (markdown — referenced by agent.config.json)
+  write(path.join(root, "agent/system-prompt.md"), systemPromptTemplate());
+
+  // 4. Web search tool (default example — OpenAI web search, uses OPENAI_API_KEY)
   write(path.join(root, "agent/tools/webSearch.ts"), webSearchTool());
+
+  // 4b. Datetime context provider (scaffolded as a working example)
+  write(path.join(root, "agent/context/datetime.ts"), datetimeContextTemplate());
 
   // 5. Single catch-all API route — [[...path]] handles all /api/agent/* endpoints
   write(path.join(root, apiBase, "[[...path]]", "route.ts"), ROUTE_CATCHALL);

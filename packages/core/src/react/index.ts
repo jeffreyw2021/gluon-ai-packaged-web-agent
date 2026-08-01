@@ -40,6 +40,23 @@ export type { UseComposerActionsOptions, UseComposerActionsReturn } from "./hook
 export { AgentPanel } from "./panel/AgentPanel";
 export type { AgentPanelProps, AgentPanelClassNames, AgentPanelStyles } from "./panel/AgentPanel";
 
+// ── Layer 2: self-contained pre-wired panel components ───────────────────
+// Each component calls its own hooks from AgentProvider and can be used
+// independently — no data props required, only customisation props.
+export { ChatTopBar } from "./panel/ChatTopBar";
+export type { ChatTopBarProps } from "./panel/ChatTopBar";
+
+export { ChatMessageList } from "./panel/ChatMessageList";
+export type { ChatMessageListProps } from "./panel/ChatMessageList";
+
+export { ChatInputBar } from "./panel/ChatInputBar";
+export type { ChatInputBarProps } from "./panel/ChatInputBar";
+
+// ── Layer 3: drop-in composed panel ──────────────────────────────────────
+// Wraps AgentProvider + Layer 2 stack in a styled shell. One import, ready.
+export { GluonAgentPanel } from "./panel/GluonAgentPanel";
+export type { GluonAgentPanelProps } from "./panel/GluonAgentPanel";
+
 // ── Chat list ─────────────────────────────────────────────────────────────
 export { ChatList } from "./panel/ChatList";
 export type { ChatListProps } from "./panel/ChatList";
@@ -68,7 +85,7 @@ export type { ActionBlockSlotProps } from "./messages/ActionBlockSlot";
 
 // ── Chat input ────────────────────────────────────────────────────────────
 export { ChatInput } from "./input/ChatInput";
-export type { ChatInputProps, ChatInputClassNames, ChatInputStyles } from "./input/ChatInput";
+export type { ChatInputProps, ChatInputClassNames, ChatInputStyles, ChatInputHandle } from "./input/ChatInput";
 
 // ── Headless buttons ──────────────────────────────────────────────────────
 export { SendButton } from "./buttons/SendButton";

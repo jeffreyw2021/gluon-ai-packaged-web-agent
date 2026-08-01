@@ -87,7 +87,7 @@ export function AgentPanel({
     stopGeneration,
   } = adapter;
 
-  const prompts = suggestedPrompts ?? ctxPrompts;
+  const prompts = suggestedPrompts ?? ctxPrompts ?? undefined;
   const hasAttachments = (attachments?.attachments.length ?? 0) > 0;
 
   const handleSend = useCallback(() => {

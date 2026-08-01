@@ -111,6 +111,15 @@ export interface MessageListProps {
    * automatic per-message spacing entirely (manage it yourself via CSS).
    */
   messageSpacing?: MessageSpacing | false;
+  /**
+   * When `true`, the list smoothly scrolls to the bottom whenever a new
+   * message arrives or the agent's run activity changes.
+   *
+   * Defaults to `false` — opt in explicitly so the parent container can
+   * manage scroll position itself (e.g. to preserve the user's scroll when
+   * they have scrolled up to read earlier messages).
+   */
+  autoScroll?: boolean;
 }
 
 // Default empty state — unstyled list of buttons
@@ -134,8 +143,10 @@ function DefaultEmpty({
 
 /**
  * Headless message list. Maps over messages and renders the appropriate
- * sub-component for each. Auto-scrolls to the bottom on new activity.
- * No styles — apply via `className` / `style`.
+ * sub-component for each. No styles — apply via `className` / `style`.
+ *
+ * Auto-scroll is **off by default**. Pass `autoScroll` to enable smooth
+ * scroll-to-bottom on new messages and activity changes.
  *
  * Override any piece via the `components` slot map.
  */
@@ -152,12 +163,14 @@ export function MessageList({
   style,
   components = {},
   messageSpacing,
+  autoScroll = false,
 }: MessageListProps) {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!autoScroll) return;
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, runActivity]);
+  }, [autoScroll, messages.length, runActivity]);
 
   const isEmpty = messages.length === 0 && !isLiveRunPhase(runPhase);
 

@@ -77,6 +77,17 @@ export interface UseSpeechTranscriberReturn {
   reset: () => void;
   /** Whether the browser supports the Web Speech API. */
   isSupported: boolean;
+  /**
+   * Stops the recognizer, returns the full committed text (finalized transcript
+   * + any in-progress interim result), and resets all transcript state.
+   *
+   * **Use this instead of calling `stop()` → reading `transcript` → `reset()`**
+   * separately. Speech recognition callbacks are browser events; React may not
+   * have flushed the corresponding state updates by the time a click handler
+   * reads `transcript`/`interimTranscript`. This method reads from refs that are
+   * updated synchronously inside `onresult`, so it is always up to date.
+   */
+  commitAndReset: () => string;
 }
 
 function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
@@ -122,6 +133,13 @@ export function useSpeechTranscriber(
   const [transcript, setTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
 
+  // Refs mirror the state values but are updated synchronously inside
+  // `onresult`. This lets `commitAndReset` read the true latest values even
+  // when React hasn't flushed pending batched updates yet (which happens when
+  // a click handler runs before React processes async browser-event state updates).
+  const transcriptRef = useRef("");
+  const interimTranscriptRef = useRef("");
+
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   // Keep latest defaults accessible inside event handlers without re-binding
   const defaultsRef = useRef(defaults);
@@ -135,8 +153,24 @@ export function useSpeechTranscriber(
   }, []);
 
   const reset = useCallback(() => {
+    transcriptRef.current = "";
+    interimTranscriptRef.current = "";
     setTranscript("");
     setInterimTranscript("");
+  }, []);
+
+  const commitAndReset = useCallback(() => {
+    const finalText = transcriptRef.current.trim();
+    const interimText = interimTranscriptRef.current.trim();
+    const combined = [finalText, interimText].filter(Boolean).join(" ");
+    // Clear refs synchronously so a subsequent start begins clean.
+    transcriptRef.current = "";
+    interimTranscriptRef.current = "";
+    // Schedule React state resets for the next render.
+    setTranscript("");
+    setInterimTranscript("");
+    recognitionRef.current?.stop();
+    return combined;
   }, []);
 
   const start = useCallback((options?: SpeechTranscriberOptions) => {
@@ -172,8 +206,17 @@ export function useSpeechTranscriber(
       }
 
       if (finalChunk) {
-        setTranscript((prev) => (prev ? `${prev} ${finalChunk}` : finalChunk).trim());
+        // Update ref synchronously so commitAndReset() always sees the latest value
+        // even if the React state update hasn't been flushed yet.
+        const newTranscript = (transcriptRef.current
+          ? `${transcriptRef.current} ${finalChunk}`
+          : finalChunk
+        ).trim();
+        transcriptRef.current = newTranscript;
+        setTranscript(newTranscript);
       }
+      // Same for interim — update ref first, then schedule state update.
+      interimTranscriptRef.current = interim;
       setInterimTranscript(interim);
     };
 
@@ -187,6 +230,7 @@ export function useSpeechTranscriber(
     };
 
     rec.onend = () => {
+      interimTranscriptRef.current = "";
       setListening(false);
       setInterimTranscript("");
       recognitionRef.current = null;
@@ -207,5 +251,5 @@ export function useSpeechTranscriber(
     };
   }, []);
 
-  return { listening, transcript, interimTranscript, start, stop, reset, isSupported };
+  return { listening, transcript, interimTranscript, start, stop, reset, isSupported, commitAndReset };
 }

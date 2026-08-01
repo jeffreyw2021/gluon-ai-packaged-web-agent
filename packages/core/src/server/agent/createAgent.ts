@@ -1,14 +1,19 @@
 
 import { ToolLoopAgent, stepCountIs, tool } from "ai";
-import { openai } from "@ai-sdk/openai";
+import type { ToolSet } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import type { LoadedConfig } from "../../config/loader";
 import { requestConfirmation } from "./tools/requestConfirmation";
 import { createReadSkillTool } from "./tools/readSkill";
 import { createDiscoverToolsTool } from "./tools/discoverTools";
 
-function buildSystemPrompt(config: LoadedConfig): string {
+function buildSystemPrompt(config: LoadedConfig, contextParts: string[]): string {
   let prompt = config.systemPrompt;
+
+  if (contextParts.length > 0) {
+    prompt += "\n\n## Context\n" + contextParts.join("\n");
+  }
 
   if (Object.keys(config.tools).length > 0) {
     prompt +=
@@ -30,8 +35,20 @@ function buildSystemPrompt(config: LoadedConfig): string {
   return prompt;
 }
 
-export function createAgent(config: LoadedConfig) {
-  const tools: Record<string, ReturnType<typeof tool>> = {};
+export async function createAgent(config: LoadedConfig) {
+  // Call context providers fresh on every request so dynamic values (e.g.
+  // current date/time) are always up to date.
+  const contextParts: string[] = [];
+  for (const provider of config.contextProviders ?? []) {
+    try {
+      const value = await provider();
+      if (value && value.trim()) contextParts.push(value.trim());
+    } catch (err) {
+      console.error("[gluon-ai] Context provider threw an error (skipped):", err);
+    }
+  }
+
+  const tools: ToolSet = {};
 
   tools["request_confirmation"] = requestConfirmation;
 
@@ -64,11 +81,12 @@ export function createAgent(config: LoadedConfig) {
     );
   }
 
-  const model = openai(modelId, { apiKey: openaiApiKey });
+  const openaiProvider = createOpenAI({ apiKey: openaiApiKey });
+  const model = openaiProvider(modelId);
 
   return new ToolLoopAgent({
     model,
-    instructions: buildSystemPrompt(config),
+    instructions: buildSystemPrompt(config, contextParts),
     allowSystemInMessages: true,
     tools,
     maxOutputTokens: config.raw.maxOutputTokens,

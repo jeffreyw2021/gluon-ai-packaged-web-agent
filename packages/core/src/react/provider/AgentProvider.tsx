@@ -21,7 +21,13 @@ export interface AgentContextValue {
   adapter: AgentSessionAdapter;
   actionBlocks: ActionBlockRegistry;
   basePath: string;
-  suggestedPrompts: string[];
+  /**
+   * Suggested prompts sourced from `agent.config.json`.
+   * - `null`  — config is still fetching; show loading skeletons.
+   * - `[]`    — config loaded, no prompts configured; show nothing.
+   * - `string[]` — prompts ready; render them.
+   */
+  suggestedPrompts: string[] | null;
   /** UI hints keyed by tool name, sourced from each tool's `ui` field. */
   toolUi: Record<string, ToolUI>;
 }
@@ -93,7 +99,11 @@ function AgentProviderInner({
     staleTime: Infinity,
   });
 
-  const suggestedPrompts = promptsProp ?? configData?.suggestedPrompts ?? [];
+  // null = config still loading (show skeletons); [] = no prompts; string[] = ready
+  const suggestedPrompts: string[] | null =
+    promptsProp !== undefined
+      ? promptsProp
+      : configData?.suggestedPrompts ?? null;
   const toolUi: Record<string, ToolUI> = configData?.toolUi ?? {};
 
   return (

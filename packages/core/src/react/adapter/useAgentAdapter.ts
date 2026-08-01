@@ -153,15 +153,10 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
       const sendReasoning =
         effectiveMode === "thinking" ? true : effectiveMode === "simple" ? false : undefined;
 
-      // optimistic update
-      queryClient.setQueryData<{ messages: UIMessage[]; runId: string | null }>(
-        ["agent-thread", chatId],
-        (old) => {
-          const base = old?.messages ?? EMPTY_MESSAGES;
-          return { messages: [...base, msg], runId: old?.runId ?? null };
-        },
-      );
-
+      // Set pending BEFORE the cache write so that the re-render triggered by
+      // TanStack Query's useSyncExternalStore subscription already sees
+      // outboundPending=true → runPhase="queued", preventing the one-frame
+      // flash where the user message is visible but ThoughtWindow is not.
       setOutboundPending(true);
       if (chatId !== activeChatId) {
         setActiveChatId(chatId);
@@ -179,6 +174,16 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
           return [placeholder, ...(Array.isArray(old) ? old : [])];
         });
       }
+
+      // optimistic message update — after pending flag so ThoughtWindow is
+      // already "live" when this message lands in the query cache
+      queryClient.setQueryData<{ messages: UIMessage[]; runId: string | null }>(
+        ["agent-thread", chatId],
+        (old) => {
+          const base = old?.messages ?? EMPTY_MESSAGES;
+          return { messages: [...base, msg], runId: old?.runId ?? null };
+        },
+      );
 
       try {
         const res = await fetch(`${basePath}/commands`, {

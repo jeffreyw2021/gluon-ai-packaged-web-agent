@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { KeyboardEvent, FormEvent, ChangeEvent } from "react";
 import { isLiveRunPhase } from "../../types/RunPhase";
 import type { RunPhase } from "../../types/RunPhase";
@@ -53,6 +53,21 @@ export function useChatInput({
     ta.style.height = "auto";
     ta.style.height = `${Math.min(ta.scrollHeight, maxHeight)}px`;
   }, [maxHeight]);
+
+  // Re-run autoGrow whenever `value` changes via any path — including
+  // programmatic updates (e.g. audio transcription) that bypass the native
+  // change event and therefore wouldn't otherwise trigger a resize.
+  // Guard: if the element is currently `display:none` (e.g. hidden by a
+  // parent while voice input is active), skip — scrollHeight would be 0
+  // and we'd lock the height to 0px. The parent is responsible for calling
+  // autoGrow() again once the element becomes visible (see ChatInput's
+  // imperative handle).
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    if (typeof window !== "undefined" && window.getComputedStyle(ta).display === "none") return;
+    autoGrow();
+  }, [value, autoGrow]);
 
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLTextAreaElement>) => {

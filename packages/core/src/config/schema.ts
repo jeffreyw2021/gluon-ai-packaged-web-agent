@@ -3,7 +3,9 @@ import { z } from "zod";
 export const AgentConfigSchema = z.object({
   model: z.string().default("gpt-4o"),
 
-  systemPrompt: z.string().default("You are a helpful assistant."),
+  // Prefer a path to agent/system-prompt.md (scaffolded by `gluon-ai init`).
+  // Inline strings are also supported for simple setups.
+  systemPrompt: z.string().default("./agent/system-prompt.md"),
 
   maxOutputTokens: z.number().int().positive().default(32_768),
   maxRounds: z.number().int().positive().default(25),
@@ -13,6 +15,22 @@ export const AgentConfigSchema = z.object({
   actionBlocks: z.record(z.string(), z.string()).optional().default({}),
 
   skills: z.array(z.string()).optional().default([]),
+
+  /**
+   * Array of relative paths to `.ts` files that each export a default
+   * `async function(): Promise<string>`.  Every provider is called fresh on
+   * each agent request; its return value is appended to the system prompt
+   * under a `## Context` section.
+   *
+   * Use this for dynamic runtime information (current date/time, user data,
+   * environment state) that the model should always know about.
+   *
+   * Example provider — `./agent/context/datetime.ts`:
+   *   export default async function () {
+   *     return `Today is ${new Date().toDateString()}`;
+   *   }
+   */
+  context: z.array(z.string()).optional().default([]),
 
   auth: z.object({
     /**

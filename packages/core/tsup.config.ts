@@ -65,7 +65,10 @@ export default defineConfig([
     format: ["cjs", "esm"],
     dts: true,
     sourcemap: true,
-    external: serverExternal,
+    // "./server.js" is a sibling output file loaded at runtime via dynamic import();
+    // mark it external so esbuild leaves the path as-is rather than trying to resolve it
+    // at build time (where only source files, not dist outputs, exist).
+    external: [...serverExternal, "./server.js"],
   },
   {
     entry: { cli: "src/cli/index.ts" },

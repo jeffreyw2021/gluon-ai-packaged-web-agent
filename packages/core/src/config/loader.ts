@@ -12,6 +12,14 @@ export interface LoadedConfig {
   actionBlocks: ActionBlockRegistry;
   systemPrompt: string;
   skills: string[];
+  /**
+   * Context provider functions loaded from `agent.config.json#context`.
+   * Each function is called fresh on every agent request; its string return
+   * value is injected into the system prompt under a `## Context` block.
+   * Stored as functions (not pre-called strings) so dynamic values like the
+   * current date/time are always up to date, even though `loadConfig` is cached.
+   */
+  contextProviders: Array<() => Promise<string>>;
   auth: {
     getUserId: (req: Request) => Promise<string | null>;
   };
@@ -145,6 +153,21 @@ export async function loadConfig(): Promise<LoadedConfig> {
     skills.push(content);
   }
 
+  const contextProviders: Array<() => Promise<string>> = [];
+  for (const contextPath of config.context ?? []) {
+    const resolved = resolveRelativePath(configPath, contextPath);
+    if (!fs.existsSync(resolved)) {
+      throw new Error(`[gluon-ai] Context provider file not found: ${resolved}`);
+    }
+    const mod = await dynamicImport(resolved);
+    if (typeof mod !== "function") {
+      throw new Error(
+        `[gluon-ai] Context provider "${resolved}" must export a default async function () => Promise<string>.`,
+      );
+    }
+    contextProviders.push(mod as () => Promise<string>);
+  }
+
   const getUserId = await resolveGetUserId(configPath, config.auth.handler);
 
   let hooks: LoadedConfig["hooks"] = {};
@@ -177,6 +200,7 @@ export async function loadConfig(): Promise<LoadedConfig> {
     actionBlocks,
     systemPrompt,
     skills,
+    contextProviders,
     auth: { getUserId },
     hooks,
   };
