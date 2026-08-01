@@ -37,7 +37,7 @@ npm install gluon-ai@beta
 Put secrets in `.env` / `.env.local` **before** init (the wizard detects existing names):
 
 ```env
-OPENAI_API_KEY=sk-...
+<MODEL PROVIDER>_API_KEY=sk-...
 
 AGENT_DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
 REDIS_URL=redis://localhost:6379
