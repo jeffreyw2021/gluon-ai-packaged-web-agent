@@ -239,9 +239,19 @@ function agentConfigTemplate(answers: Answers): string {
 function dockerfileTemplate(): string {
   return `FROM node:24-slim
 
-# tsx lets the container run TypeScript tool/context files directly —
-# no build step needed for agent/ files during development
-RUN npm install -g gluon-ai@beta tsx
+# Prisma's query engine binary requires OpenSSL at runtime
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+# Install gluon-ai + tsx + prisma@6 globally.
+# Pinning prisma@6 matches gluon-ai's schema format — Prisma 7 changed the
+# datasource schema syntax and is not compatible with the bundled schema.prisma.
+RUN npm install -g gluon-ai@beta tsx prisma@6
+
+# Generate the Prisma client for this platform (Linux/amd64 binaries).
+# Must run after the global install so the correct schema.prisma is in place.
+RUN AGENT_DATABASE_URL=postgresql://placeholder:5432/agent \\
+    prisma generate \\
+    --schema /usr/local/lib/node_modules/gluon-ai/prisma/schema.prisma
 
 WORKDIR /app
 COPY agent.config.json .
@@ -249,6 +259,11 @@ COPY agent/ ./agent/
 
 ENV AGENT_CONFIG_PATH=/app/agent.config.json
 ENV NODE_ENV=production
+
+# Install gluon-ai and its full transitive deps (zod, ai, etc.) into
+# /app/agent/node_modules so ESM imports in tool/context files resolve.
+# npm reuses the cache from the global install above, so this is fast.
+RUN cd /app/agent && npm install --no-audit --no-fund
 
 EXPOSE 3001
 CMD ["gluon-ai", "start"]
@@ -303,8 +318,14 @@ volumes:
 `;
 }
 
-function agentPackageJsonTemplate(): string {
-  return `${JSON.stringify({ name: "gluon-agent", private: true, type: "module" }, null, 2)}\n`;
+function agentPackageJsonTemplate(sdkPackage?: string): string {
+  const deps: Record<string, string> = { "gluon-ai": "beta" };
+  if (sdkPackage) deps[sdkPackage] = "latest";
+  return `${JSON.stringify(
+    { name: "gluon-agent", private: true, type: "module", dependencies: deps },
+    null,
+    2,
+  )}\n`;
 }
 
 function systemPromptTemplate(): string {
@@ -502,7 +523,8 @@ export async function initCommand(
   write(path.join(gluonDir, "docker-compose.yml"), dockerComposeTemplate(answers.port));
 
   // gluon/agent/package.json
-  write(path.join(gluonDir, "agent", "package.json"), agentPackageJsonTemplate());
+  const sdkPkg = PROVIDERS[answers.providerIndex].sdkPackage || undefined;
+  write(path.join(gluonDir, "agent", "package.json"), agentPackageJsonTemplate(sdkPkg));
 
   // gluon/agent/system-prompt.md
   write(path.join(gluonDir, "agent", "system-prompt.md"), systemPromptTemplate());
