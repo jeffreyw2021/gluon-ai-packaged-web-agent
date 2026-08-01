@@ -131,7 +131,6 @@ function scanProject(root: string): ScanResult {
 
 interface Answers {
   gatewayApiKey: string;
-  openaiKeyVar: string;
   databaseUrlVar: string;
   redisUrlVar: string;
   model: string;
@@ -145,13 +144,7 @@ interface Answers {
 
 function buildDefaults(scan: ScanResult): Answers {
   return {
-    gatewayApiKey: scan.detectedEnvVars.has("VERCEL_AI_GATEWAY_API_KEY")
-      ? "VERCEL_AI_GATEWAY_API_KEY"
-      : "VERCEL_AI_GATEWAY_API_KEY",
-    openaiKeyVar: scan.detectedEnvVars.has("OPENAI_API_KEY")
-      ? "OPENAI_API_KEY"
-      : ([...scan.detectedEnvVars.keys()].find((k) => k.includes("OPENAI")) ??
-        "OPENAI_API_KEY"),
+    gatewayApiKey: "VERCEL_AI_GATEWAY_API_KEY",
     databaseUrlVar: scan.detectedEnvVars.has("AGENT_DATABASE_URL")
       ? "AGENT_DATABASE_URL"
       : scan.detectedEnvVars.has("DATABASE_URL")
@@ -203,7 +196,6 @@ async function askQuestions(
   if (useDefaults) {
     console.log("  Using all defaults (--default flag set):\n");
     console.log(`    Gateway key var : ${defaults.gatewayApiKey}`);
-    console.log(`    OpenAI key var  : ${defaults.openaiKeyVar}`);
     console.log(`    Database URL    : ${defaults.databaseUrlVar}`);
     console.log(`    Redis URL       : ${defaults.redisUrlVar}`);
     console.log(`    Model           : ${defaults.model}`);
@@ -231,12 +223,8 @@ async function askQuestions(
   );
 
   const gatewayApiKey = await prompt(
-    "AI Gateway API key env var name (VERCEL_AI_GATEWAY_API_KEY or fallback OPENAI_API_KEY)",
+    "AI Gateway API key env var name",
     defaults.gatewayApiKey,
-  );
-  const openaiKeyVar = await prompt(
-    "OpenAI API key env var name (for OpenAI-specific tools, e.g. web_search)",
-    defaults.openaiKeyVar,
   );
   const databaseUrlVar = await prompt(
     "PostgreSQL DATABASE_URL env var name",
@@ -296,7 +284,6 @@ async function askQuestions(
 
   return {
     gatewayApiKey,
-    openaiKeyVar,
     databaseUrlVar,
     redisUrlVar,
     model,
@@ -615,7 +602,6 @@ function configTemplate(answers: Answers): string {
     ],
     env: {
       gatewayApiKey: answers.gatewayApiKey,
-      openaiApiKey: answers.openaiKeyVar,
       databaseUrl: answers.databaseUrlVar,
       redisUrl: answers.redisUrlVar,
     },
@@ -696,12 +682,11 @@ export default async function (): Promise<string> {
 function webSearchTool(): string {
   return `import { defineTool } from "gluon-ai";
 import { z } from "zod";
-import { generateText } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
+import { createGateway, generateText } from "ai";
 
-// ── Web search — OpenAI built-in web search ───────────────────────────────
-// Uses OpenAI's native web_search tool via the Responses API.
-// No extra API key needed — uses the same OPENAI_API_KEY as the agent.
+// ── Web search via Vercel AI Gateway ─────────────────────────────────────────
+// Routes through your VERCEL_AI_GATEWAY_API_KEY — no extra key needed.
+// Uses openai/gpt-4o-search-preview, which has web search built in.
 
 export default defineTool({
   description:
@@ -711,15 +696,19 @@ export default defineTool({
     query: z.string().describe("The search query — be specific."),
   }),
   execute: async ({ query }) => {
-    const provider = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const gateway = createGateway({
+      apiKey: process.env.VERCEL_AI_GATEWAY_API_KEY,
+    });
     const { text, sources } = await generateText({
-      model: provider.responses("gpt-4o-mini"),
-      tools: { web_search: provider.tools.webSearch() },
+      model: gateway("openai/gpt-4o-search-preview"),
       prompt: query,
     });
     return {
       summary: text,
-      citations: (sources ?? []).map((s) => ({ title: s.title ?? "", url: s.url })),
+      citations: (sources ?? []).map((s) => ({
+        title: "title" in s ? String(s.title ?? "") : "",
+        url: s.url,
+      })),
     };
   },
 });
@@ -929,7 +918,7 @@ export async function initCommand(
   // 3. Default system prompt (markdown — referenced by agent.config.json)
   write(path.join(root, "agent/system-prompt.md"), systemPromptTemplate());
 
-  // 4. Web search tool (default example — OpenAI web search, uses OPENAI_API_KEY)
+  // 4. Web search tool (default example — uses gateway via VERCEL_AI_GATEWAY_API_KEY)
   write(path.join(root, "agent/tools/webSearch.ts"), webSearchTool());
 
   // 4b. Datetime context provider (scaffolded as a working example)
@@ -977,12 +966,10 @@ export async function initCommand(
   1. Add your secrets to .env.local (or your platform env):
 
        ${answers.gatewayApiKey}=<your-vercel-ai-gateway-key>
-       OPENAI_API_KEY=sk-...   ← fallback & OpenAI-specific tools
        ${answers.databaseUrlVar}=postgresql://...   ← agent tables DB connection
        ${answers.redisUrlVar}=redis://...
 
-     Gateway key: https://vercel.com/docs/ai-gateway
-     (OPENAI_API_KEY alone also works — it's used as a gateway fallback.)
+     Get a gateway key: https://vercel.com/docs/ai-gateway
 
   2. The agent tables (gluon_chat, gluon_chat_job_run) are managed entirely
      by the package — your project's prisma/schema.prisma is untouched.

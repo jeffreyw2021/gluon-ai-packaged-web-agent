@@ -1,6 +1,6 @@
-# Gluon-AI
+# Gluon AI
 
-> **Beta** — personal project, rough edges expected.
+> **Beta** project, rough edges expected.
 
 Sometimes you want to build an AI-native product from scratch. Sometimes you just want an agent inside an existing product. The backend for that second case is mostly the same every time — chats, streaming, tools, a worker, Redis, a DB. Gluon packages that stack so you can drop an agent into a Next.js app and focus on the product side.
 
@@ -22,7 +22,7 @@ Built for myself. Shared in case it's useful.
 | **Any gateway model** | Powered by [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) — OpenAI, Anthropic, Google, xAI, DeepSeek, and more |
 
 
-One `VERCEL_AI_GATEWAY_API_KEY` unlocks every supported provider; a plain `OPENAI_API_KEY` also works as a fallback.
+One `VERCEL_AI_GATEWAY_API_KEY` unlocks every supported provider.
 
 ---
 
@@ -37,9 +37,7 @@ npm install gluon-ai@beta
 Put secrets in `.env` / `.env.local` **before** init (the wizard detects existing names):
 
 ```env
-# Pick one:
-VERCEL_AI_GATEWAY_API_KEY=...   # preferred — unlocks all providers
-OPENAI_API_KEY=sk-...            # fallback (also needed for OpenAI web_search tool)
+VERCEL_AI_GATEWAY_API_KEY=...   # required — unlocks all providers
 
 AGENT_DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
 REDIS_URL=redis://localhost:6379
@@ -258,7 +256,6 @@ Layer 2 components (`ChatTopBar`, `ChatMessageList`, `ChatInputBar`) and `GluonA
   ],
   "env": {
     "gatewayApiKey": "VERCEL_AI_GATEWAY_API_KEY",
-    "openaiApiKey": "OPENAI_API_KEY",
     "databaseUrl": "AGENT_DATABASE_URL",
     "redisUrl": "REDIS_URL"
   }
@@ -353,9 +350,9 @@ export function getLanguageModel(modelId: string): LanguageModel {
 
 Gateway remains the preferred path for new providers — the direct route requires forking.
 
-**D. Provider-specific tools** (e.g. OpenAI web search)
+**D. Provider-specific tools**
 
-Tools that call a vendor SDK directly (like `webSearch.ts` using `@ai-sdk/openai` Responses API) stay provider-specific by design. They need that vendor's key even if the main agent uses a different model via Gateway. This is documented in the scaffolded tool file.
+The scaffolded `webSearch.ts` uses `createGateway` with `openai/gpt-4o-search-preview` — a model that has web search built in natively. The same `VERCEL_AI_GATEWAY_API_KEY` covers it, so no extra keys are needed.
 
 ### Reasoning / Think mode
 

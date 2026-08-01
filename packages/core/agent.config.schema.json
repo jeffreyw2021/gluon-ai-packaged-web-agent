@@ -96,12 +96,7 @@
         "gatewayApiKey": {
           "type": "string",
           "default": "VERCEL_AI_GATEWAY_API_KEY",
-          "description": "Name of the env var holding the Vercel AI Gateway API key (preferred). Falls back to openaiApiKey if not set."
-        },
-        "openaiApiKey": {
-          "type": "string",
-          "default": "OPENAI_API_KEY",
-          "description": "Name of the env var holding the OpenAI API key. Used as a gateway fallback, and by OpenAI-specific tools (e.g. web_search)."
+          "description": "Name of the env var holding the Vercel AI Gateway API key."
         },
         "databaseUrl": {
           "type": "string",

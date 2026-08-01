@@ -73,14 +73,8 @@ export const AgentConfigSchema = z.object({
       /**
        * Env var name that holds the Vercel AI Gateway API key.
        * Defaults to VERCEL_AI_GATEWAY_API_KEY.
-       * Falls back to openaiApiKey if not set.
        */
       gatewayApiKey: z.string().default("VERCEL_AI_GATEWAY_API_KEY"),
-      /**
-       * Env var name that holds the OpenAI API key (legacy fallback).
-       * Still used by provider-specific scaffolds (e.g. OpenAI web_search tool).
-       */
-      openaiApiKey: z.string().default("OPENAI_API_KEY"),
       databaseUrl: z.string().default("AGENT_DATABASE_URL"),
       redisUrl: z.string().default("REDIS_URL"),
     })
