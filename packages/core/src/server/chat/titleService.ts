@@ -1,9 +1,10 @@
 
-import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, type UIMessage } from "ai";
+import { resolveLanguageModel } from "../model/registry";
 import { chatRepository } from "../db/repositories/chatRepository";
 import { getDb } from "../db/adapterRegistry";
 import { redisLiveBus } from "../live/RedisLiveBus";
+import type { AgentConfig } from "../../config/schema";
 
 // ── Context extraction ────────────────────────────────────────────────────────
 
@@ -37,11 +38,11 @@ const TITLE_SYSTEM_PROMPT =
 async function generateTitle(
   contextText: string,
   modelId: string,
-  apiKey: string,
+  envConfig?: AgentConfig["env"],
 ): Promise<string | null> {
-  const openai = createOpenAI({ apiKey });
+  const model = resolveLanguageModel(modelId, envConfig);
   const { text } = await generateText({
-    model: openai(modelId),
+    model,
     system: TITLE_SYSTEM_PROMPT,
     prompt: contextText,
     maxOutputTokens: 20,
@@ -53,10 +54,10 @@ async function generateTitle(
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export interface ScheduleChatTitleOptions {
-  /** Model ID to use for title generation (e.g. "gpt-4o-mini"). */
+  /** Model ID to use for title generation (e.g. "openai/gpt-4o-mini"). */
   modelId?: string;
-  /** OpenAI API key. Falls back to `process.env.OPENAI_API_KEY`. */
-  apiKey?: string;
+  /** Env config from agent.config.json — used to resolve the correct API keys. */
+  envConfig?: AgentConfig["env"];
 }
 
 /**
@@ -80,11 +81,9 @@ export function scheduleChatTitleGeneration(
     const contextText = extractContextText(messages);
     if (!contextText.trim()) return;
 
-    const modelId = options.modelId ?? "gpt-4o-mini";
-    const apiKey =
-      options.apiKey ?? process.env.OPENAI_API_KEY ?? "";
+    const modelId = options.modelId ?? "openai/gpt-4o-mini";
 
-    const title = await generateTitle(contextText, modelId, apiKey).catch(
+    const title = await generateTitle(contextText, modelId, options.envConfig).catch(
       (err) => {
         console.error("[titleService] generation failed:", err);
         return null;

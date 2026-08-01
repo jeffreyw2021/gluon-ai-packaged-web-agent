@@ -18,7 +18,7 @@ Built for myself. Shared in case it's useful.
 | React 19+ | |
 | PostgreSQL | Best supported. MySQL / SQLite available via init; less battle-tested |
 | Redis | Required for the BullMQ worker + live events |
-| OpenAI API | Only provider supported right now |
+| AI provider | OpenAI included; Anthropic, Google, Mistral, Groq, xAI, DeepSeek, or Vercel AI Gateway — see [AI model providers](#ai-model-providers) |
 
 ---
 
@@ -33,7 +33,14 @@ npm install gluon-ai@beta
 Put secrets in `.env` / `.env.local` **before** init (the wizard detects existing names):
 
 ```env
+# Required for the default openai/gpt-4o model:
 OPENAI_API_KEY=sk-...
+
+# Add keys for other providers as needed — see AI model providers below
+# ANTHROPIC_API_KEY=sk-ant-...
+# GOOGLE_GENERATIVE_AI_API_KEY=AIza...
+# AI_GATEWAY_API_KEY=...    # enables the gateway/ model prefix
+
 AGENT_DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
 REDIS_URL=redis://localhost:6379
 ```
@@ -218,7 +225,7 @@ Layer 2 components (`ChatTopBar`, `ChatMessageList`, `ChatInputBar`) and `GluonA
 
 ```json
 {
-  "model": "gpt-4o",
+  "model": "openai/gpt-4o",
   "systemPrompt": "./agent/system-prompt.md",
   "maxOutputTokens": 16384,
   "maxRounds": 25,
@@ -246,6 +253,7 @@ Layer 2 components (`ChatTopBar`, `ChatMessageList`, `ChatInputBar`) and `GluonA
 
 | Field | What it does |
 | ----- | ------------ |
+| `model` | `provider/model` string — see [AI model providers](#ai-model-providers) |
 | `systemPrompt` | Inline string **or** path to a `.md` / `.txt` file |
 | `tools` | Map of tool name → `defineTool` module path |
 | `skills` | Markdown docs the agent can load via built-in `read_skill` |
@@ -258,6 +266,68 @@ Layer 2 components (`ChatTopBar`, `ChatMessageList`, `ChatInputBar`) and `GluonA
 | `env.*` | Remap env var **names** if yours differ from the defaults |
 
 Full schema: [`packages/core/agent.config.schema.json`](packages/core/agent.config.schema.json)
+
+---
+
+## AI model providers
+
+Gluon uses the [Vercel AI SDK](https://ai-sdk.dev) provider registry. The `model` field in `agent.config.json` is a `provider/model` string — the prefix determines which provider is used.
+
+### Direct (BYOK — Bring Your Own Key)
+
+Install only the provider packages you need. `@ai-sdk/openai` ships with gluon; all others are optional.
+
+| Prefix | Install | Env var |
+| ---------- | --------------------------------------- | -------------------------------- |
+| `openai` | _(included)_ | `OPENAI_API_KEY` |
+| `anthropic` | `npm i @ai-sdk/anthropic` | `ANTHROPIC_API_KEY` |
+| `google` | `npm i @ai-sdk/google` | `GOOGLE_GENERATIVE_AI_API_KEY` |
+| `mistral` | `npm i @ai-sdk/mistral` | `MISTRAL_API_KEY` |
+| `groq` | `npm i @ai-sdk/groq` | `GROQ_API_KEY` |
+| `xai` | `npm i @ai-sdk/xai` | `XAI_API_KEY` |
+| `deepseek` | `npm i @ai-sdk/deepseek` | `DEEPSEEK_API_KEY` |
+
+Examples:
+
+```json
+{ "model": "openai/gpt-4o" }
+{ "model": "anthropic/claude-sonnet-4.6" }
+{ "model": "google/gemini-2.0-flash" }
+{ "model": "groq/llama-3.3-70b-versatile" }
+```
+
+A provider is registered automatically if its package is installed **and** its key env var is set. Missing either → that prefix is silently skipped.
+
+Bare model IDs (e.g. `"gpt-4o"`) are normalized to `"openai/gpt-4o"` for backward compatibility.
+
+### Via Vercel AI Gateway
+
+Prefix any model string with `gateway/` to route it through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) instead of calling the provider directly. One key, hundreds of models, no extra packages needed.
+
+```env
+AI_GATEWAY_API_KEY=your_gateway_key
+```
+
+```json
+{ "model": "gateway/openai/gpt-4o" }
+{ "model": "gateway/anthropic/claude-sonnet-4.6" }
+{ "model": "gateway/google/gemini-2.0-flash" }
+```
+
+The `gateway` prefix is registered automatically when `AI_GATEWAY_API_KEY` is set. No additional packages required — `createGateway` ships inside the `ai` package.
+
+### Custom env var names
+
+If your key is stored under a different name, remap it in `env`:
+
+```json
+{
+  "model": "anthropic/claude-sonnet-4.6",
+  "env": {
+    "anthropicApiKey": "MY_CLAUDE_KEY"
+  }
+}
+```
 
 ---
 

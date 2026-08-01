@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const AgentConfigSchema = z.object({
-  model: z.string().default("gpt-4o"),
+  model: z.string().default("openai/gpt-4o"),
 
   // Prefer a path to agent/system-prompt.md (scaffolded by `gluon-ai init`).
   // Inline strings are also supported for simple setups.
@@ -63,6 +63,13 @@ export const AgentConfigSchema = z.object({
   env: z
     .object({
       openaiApiKey: z.string().default("OPENAI_API_KEY"),
+      anthropicApiKey: z.string().default("ANTHROPIC_API_KEY"),
+      googleApiKey: z.string().default("GOOGLE_GENERATIVE_AI_API_KEY"),
+      mistralApiKey: z.string().default("MISTRAL_API_KEY"),
+      groqApiKey: z.string().default("GROQ_API_KEY"),
+      xaiApiKey: z.string().default("XAI_API_KEY"),
+      deepseekApiKey: z.string().default("DEEPSEEK_API_KEY"),
+      aiGatewayApiKey: z.string().default("AI_GATEWAY_API_KEY"),
       databaseUrl: z.string().default("AGENT_DATABASE_URL"),
       redisUrl: z.string().default("REDIS_URL"),
     })

@@ -65,13 +65,16 @@ export interface MessageListEmptyProps {
  * Defaults mirror ATS narrow-column values:
  *   - afterUser      → 2.5rem (40px)  — gap before assistant reply or pending indicator
  *   - betweenTurns   → 2rem   (32px)  — gap when assistant is followed by user
- *   - defaultGap     → 0.75rem (12px) — all other cases (last message, same-role, etc.)
+ *   - afterLast      → 2.5rem (40px)  — gap below the final message (any role)
+ *   - defaultGap     → 0.75rem (12px) — all other cases (same-role, etc.)
  */
 export interface MessageSpacing {
   /** Bottom margin after a user message (before assistant or pending). Default: `"2.5rem"` */
   afterUser?: string;
   /** Bottom margin after an assistant message when the next is a user message. Default: `"2rem"` */
   betweenTurns?: string;
+  /** Bottom margin after the last message in the list (any role). Default: `"2.5rem"` */
+  afterLast?: string;
   /** Bottom margin in all other cases. Default: `"0.75rem"` */
   defaultGap?: string;
 }
@@ -79,6 +82,7 @@ export interface MessageSpacing {
 const DEFAULT_SPACING: Required<MessageSpacing> = {
   afterUser: "2.5rem",
   betweenTurns: "2rem",
+  afterLast: "2.5rem",
   defaultGap: "0.75rem",
 };
 
@@ -87,6 +91,7 @@ function resolveMarginBottom(
   nextRole: string | undefined,
   spacing: Required<MessageSpacing>,
 ): string {
+  if (nextRole === undefined) return spacing.afterLast;
   if (currentRole === "user") return spacing.afterUser;
   if (currentRole === "assistant" && nextRole === "user") return spacing.betweenTurns;
   return spacing.defaultGap;

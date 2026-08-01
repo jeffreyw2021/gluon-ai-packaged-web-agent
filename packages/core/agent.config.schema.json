@@ -7,8 +7,8 @@
   "properties": {
     "model": {
       "type": "string",
-      "default": "gpt-4o",
-      "description": "OpenAI model ID to use for the agent."
+      "default": "openai/gpt-4o",
+      "description": "Model to use, as a provider/model string (e.g. \"openai/gpt-4o\", \"anthropic/claude-sonnet-4.6\", \"gateway/openai/gpt-4o\"). Bare model IDs like \"gpt-4o\" are normalized to \"openai/gpt-4o\" automatically."
     },
     "systemPrompt": {
       "type": "string",
@@ -87,22 +87,57 @@
     },
     "env": {
       "type": "object",
-      "description": "Remap environment variable names if they differ from the defaults.",
+      "description": "Remap environment variable names if they differ from the defaults. Only specify keys you need to override.",
       "properties": {
         "openaiApiKey": {
           "type": "string",
           "default": "OPENAI_API_KEY",
-          "description": "Name of the env var holding the OpenAI API key."
+          "description": "Env var holding the OpenAI API key (for direct openai/* model calls)."
+        },
+        "anthropicApiKey": {
+          "type": "string",
+          "default": "ANTHROPIC_API_KEY",
+          "description": "Env var holding the Anthropic API key (for direct anthropic/* model calls). Requires @ai-sdk/anthropic to be installed."
+        },
+        "googleApiKey": {
+          "type": "string",
+          "default": "GOOGLE_GENERATIVE_AI_API_KEY",
+          "description": "Env var holding the Google AI key (for direct google/* model calls). Requires @ai-sdk/google to be installed."
+        },
+        "mistralApiKey": {
+          "type": "string",
+          "default": "MISTRAL_API_KEY",
+          "description": "Env var holding the Mistral API key. Requires @ai-sdk/mistral to be installed."
+        },
+        "groqApiKey": {
+          "type": "string",
+          "default": "GROQ_API_KEY",
+          "description": "Env var holding the Groq API key. Requires @ai-sdk/groq to be installed."
+        },
+        "xaiApiKey": {
+          "type": "string",
+          "default": "XAI_API_KEY",
+          "description": "Env var holding the xAI API key. Requires @ai-sdk/xai to be installed."
+        },
+        "deepseekApiKey": {
+          "type": "string",
+          "default": "DEEPSEEK_API_KEY",
+          "description": "Env var holding the DeepSeek API key. Requires @ai-sdk/deepseek to be installed."
+        },
+        "aiGatewayApiKey": {
+          "type": "string",
+          "default": "AI_GATEWAY_API_KEY",
+          "description": "Env var holding the Vercel AI Gateway API key. When set, enables the \"gateway/\" model prefix (e.g. \"gateway/openai/gpt-4o\")."
         },
         "databaseUrl": {
           "type": "string",
           "default": "AGENT_DATABASE_URL",
-          "description": "Name of the env var holding the agent database connection string."
+          "description": "Env var holding the agent database connection string."
         },
         "redisUrl": {
           "type": "string",
           "default": "REDIS_URL",
-          "description": "Name of the env var holding the Redis connection string."
+          "description": "Env var holding the Redis connection string."
         }
       }
     },

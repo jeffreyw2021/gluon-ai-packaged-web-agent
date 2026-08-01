@@ -1,9 +1,9 @@
 
 import { ToolLoopAgent, stepCountIs, tool } from "ai";
 import type { ToolSet } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import type { LoadedConfig } from "../../config/loader";
+import { resolveLanguageModel } from "../model/registry";
 import { requestConfirmation } from "./tools/requestConfirmation";
 import { createReadSkillTool } from "./tools/readSkill";
 import { createDiscoverToolsTool } from "./tools/discoverTools";
@@ -73,16 +73,7 @@ export async function createAgent(config: LoadedConfig) {
     });
   }
 
-  const modelId = config.raw.model;
-  const openaiApiKey = process.env[config.raw.env?.openaiApiKey ?? "OPENAI_API_KEY"];
-  if (!openaiApiKey) {
-    throw new Error(
-      `OpenAI API key env var ${config.raw.env?.openaiApiKey ?? "OPENAI_API_KEY"} is not set`,
-    );
-  }
-
-  const openaiProvider = createOpenAI({ apiKey: openaiApiKey });
-  const model = openaiProvider(modelId);
+  const model = resolveLanguageModel(config.raw.model, config.raw.env);
 
   return new ToolLoopAgent({
     model,
@@ -91,10 +82,5 @@ export async function createAgent(config: LoadedConfig) {
     tools,
     maxOutputTokens: config.raw.maxOutputTokens,
     stopWhen: stepCountIs(config.raw.maxRounds),
-    providerOptions: {
-      openai: {
-        parallelToolCalls: false,
-      },
-    },
   });
 }

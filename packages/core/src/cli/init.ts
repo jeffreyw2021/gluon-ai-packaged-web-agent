@@ -157,7 +157,7 @@ function buildDefaults(scan: ScanResult): Answers {
       : ([...scan.detectedEnvVars.keys()].find(
           (k) => k.includes("REDIS") || k.includes("UPSTASH"),
         ) ?? "REDIS_URL"),
-    model: "gpt-4o",
+    model: "openai/gpt-4o",
     // Points at the markdown file scaffolded by init — easier to edit than
     // an inline JSON string, and keeps a richer default prompt out of agent.config.json.
     systemPrompt: "./agent/system-prompt.md",
@@ -194,7 +194,23 @@ async function askQuestions(
     `    App Router : ${scan.appRouterDir ?? "not found (will use app/)"}`,
   );
   console.log(`    Prisma     : ${scan.prismaSchemaPath ?? "not found"}`);
-  console.log(`    Pkg mgr    : ${scan.packageManager}\n`);
+  console.log(`    Pkg mgr    : ${scan.packageManager}`);
+
+  // Show detected provider keys
+  const KNOWN_PROVIDER_KEYS = [
+    ["OPENAI_API_KEY", "openai"],
+    ["ANTHROPIC_API_KEY", "anthropic"],
+    ["GOOGLE_GENERATIVE_AI_API_KEY", "google"],
+    ["MISTRAL_API_KEY", "mistral"],
+    ["GROQ_API_KEY", "groq"],
+    ["XAI_API_KEY", "xai"],
+    ["DEEPSEEK_API_KEY", "deepseek"],
+    ["AI_GATEWAY_API_KEY", "gateway"],
+  ] as const;
+  const detectedProviders = KNOWN_PROVIDER_KEYS
+    .filter(([k]) => scan.detectedEnvVars.has(k))
+    .map(([, label]) => label);
+  console.log(`    AI providers: ${detectedProviders.length > 0 ? detectedProviders.join(", ") : "none detected"}\n`);
 
   if (useDefaults) {
     console.log("  Using all defaults (--default flag set):\n");
@@ -204,6 +220,27 @@ async function askQuestions(
     console.log(`    Model          : ${defaults.model}`);
     console.log(`    System prompt  : ${defaults.systemPrompt}`);
     console.log(`    API base path  : ${defaults.apiBasePath}\n`);
+
+    // Show which provider keys were detected
+    const KNOWN_PROVIDER_KEYS = [
+      ["OPENAI_API_KEY", "openai"],
+      ["ANTHROPIC_API_KEY", "anthropic"],
+      ["GOOGLE_GENERATIVE_AI_API_KEY", "google"],
+      ["MISTRAL_API_KEY", "mistral"],
+      ["GROQ_API_KEY", "groq"],
+      ["XAI_API_KEY", "xai"],
+      ["DEEPSEEK_API_KEY", "deepseek"],
+      ["AI_GATEWAY_API_KEY", "gateway (Vercel AI Gateway)"],
+    ] as const;
+    const detected = KNOWN_PROVIDER_KEYS
+      .filter(([k]) => scan.detectedEnvVars.has(k))
+      .map(([, label]) => label);
+    if (detected.length > 0) {
+      console.log(`  Detected provider keys: ${detected.join(", ")}\n`);
+    } else {
+      console.log("  No provider keys detected in .env* files. Add OPENAI_API_KEY (or another provider key) before starting.\n");
+    }
+
     return defaults;
   }
 
@@ -242,7 +279,7 @@ async function askQuestions(
   );
   console.log("  Press Enter to accept the value shown in [brackets].\n");
 
-  const model = await prompt("OpenAI model to use", defaults.model);
+  const model = await prompt("Model (provider/model, e.g. openai/gpt-4o)", defaults.model);
   const systemPrompt = await prompt("System prompt", defaults.systemPrompt);
   const apiBasePath = await prompt("API route base path", defaults.apiBasePath);
 
@@ -964,7 +1001,14 @@ export async function initCommand(
 
   1. Add your secrets to .env.local (or your platform env):
 
+       # Required for the default openai/gpt-4o model:
        ${answers.openaiKeyVar}=sk-...
+
+       # Add keys for any other providers you want to use:
+       # ANTHROPIC_API_KEY=sk-ant-...   (requires: npm i @ai-sdk/anthropic)
+       # GOOGLE_GENERATIVE_AI_API_KEY=... (requires: npm i @ai-sdk/google)
+       # AI_GATEWAY_API_KEY=...          (enables gateway/* model prefix)
+
        ${answers.databaseUrlVar}=postgresql://...   ← agent tables DB connection
        ${answers.redisUrlVar}=redis://...
 
