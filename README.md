@@ -1,4 +1,4 @@
-# Gluon-ai
+# Gluon-AI
 
 > **Beta** — personal project, rough edges expected.
 
@@ -12,13 +12,15 @@ Built for myself. Shared in case it's useful.
 
 **Next.js only** for now.
 
-| Requirement | Notes |
-| ----------- | ----- |
-| Next.js 15+ | App Router |
-| React 19+ | |
-| PostgreSQL | Best supported. MySQL / SQLite available via init; less battle-tested |
-| Redis | Required for the BullMQ worker + live events |
+
+| Requirement           | Notes                                                                                                                   |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Next.js 15+           | App Router                                                                                                              |
+| React 19+             |                                                                                                                         |
+| PostgreSQL            | Best supported. MySQL / SQLite available via init; less battle-tested                                                   |
+| Redis                 | Required for the BullMQ worker + live events                                                                            |
 | **Any gateway model** | Powered by [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) — OpenAI, Anthropic, Google, xAI, DeepSeek, and more |
+
 
 One `VERCEL_AI_GATEWAY_API_KEY` unlocks every supported provider; a plain `OPENAI_API_KEY` also works as a fallback.
 
@@ -70,14 +72,16 @@ That's enough for a working agent with web search, multi-chat, streaming, and th
 
 ## What init scaffolds
 
-| Path | Purpose |
-| ---- | ------- |
-| `agent.config.json` | Model, tools, auth, prompts, env remaps |
-| `agent/system-prompt.md` | Default system prompt (edit this freely) |
-| `agent/tools/webSearch.ts` | Example tool (OpenAI web search) |
-| `agent/context/datetime.ts` | Example context provider (current date/time) |
-| `[app\|src/app]/api/gluon-ai/[[...path]]/route.ts` | Catch-all API route |
-| `instrumentation.ts` | Starts the BullMQ worker on Next.js boot |
+
+| Path                                              | Purpose                                      |
+| ------------------------------------------------- | -------------------------------------------- |
+| `agent.config.json`                               | Model, tools, auth, prompts, env remaps      |
+| `agent/system-prompt.md`                          | Default system prompt (edit this freely)     |
+| `agent/tools/webSearch.ts`                        | Example tool (OpenAI web search)             |
+| `agent/context/datetime.ts`                       | Example context provider (current date/time) |
+| `[app|src/app]/api/gluon-ai/[[...path]]/route.ts` | Catch-all API route                          |
+| `instrumentation.ts`                              | Starts the BullMQ worker on Next.js boot     |
+
 
 Also:
 
@@ -120,17 +124,19 @@ import { GluonAgentPanel } from "gluon-ai/react";
 
 `basePath` defaults to `"/api/gluon-ai"` and can be omitted.
 
-| Prop | Description |
-| ---- | ----------- |
-| `basePath` | API route prefix (default `"/api/gluon-ai"`) |
-| `darkMode` | Dark palette for the shell and Layer 2 children |
-| `frostedGlass` | Blur + translucent shell instead of a solid background |
-| `suggestedPrompts` | Empty-state chips; omit to load from `GET {basePath}/config` |
-| `actionBlocks` | Map of tool name → React component for in-stream UI |
-| `queryClient` | Share an existing TanStack Query client |
-| `style` / `className` | Applied to the outermost shell |
+
+| Prop                                  | Description                                                                               |
+| ------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `basePath`                            | API route prefix (default `"/api/gluon-ai"`)                                              |
+| `darkMode`                            | Dark palette for the shell and Layer 2 children                                           |
+| `frostedGlass`                        | Blur + translucent shell instead of a solid background                                    |
+| `suggestedPrompts`                    | Empty-state chips; omit to load from `GET {basePath}/config`                              |
+| `actionBlocks`                        | Map of tool name → React component for in-stream UI                                       |
+| `queryClient`                         | Share an existing TanStack Query client                                                   |
+| `style` / `className`                 | Applied to the outermost shell                                                            |
 | `topBar` / `messageList` / `inputBar` | Prop overrides forwarded to each Layer 2 child (`darkMode` stays controlled by the panel) |
-| `children` | Replace the default body while keeping `AgentProvider` |
+| `children`                            | Replace the default body while keeping `AgentProvider`                                    |
+
 
 ### 2. Compose — Layer 2 pieces
 
@@ -153,13 +159,13 @@ import {
 
 Each Layer 2 component reads from context — no data props required. Lay them out however you want (flex column, sidebar, etc.).
 
-**`AgentProvider`:** `basePath`, `actionBlocks`, `suggestedPrompts`, `queryClient`.
+`**AgentProvider`:** `basePath`, `actionBlocks`, `suggestedPrompts`, `queryClient`.
 
-**`ChatTopBar`:** `showReasoningPills`, `showChatHistory`, `onNewChat`, `slots.newChatButton`, `style` / `className` / `styles`, `darkMode`.
+`**ChatTopBar`:** `showReasoningPills`, `showChatHistory`, `onNewChat`, `slots.newChatButton`, `style` / `className` / `styles`, `darkMode`.
 
-**`ChatMessageList`:** `autoScroll`, `emptyView`, `skeleton`, `slots` (`userMessage`, `assistantMessage`, `thoughtWindow`, `textContent`), `style` / `className` / `styles`, `darkMode`.
+`**ChatMessageList`:** `autoScroll`, `emptyView`, `skeleton`, `slots` (`userMessage`, `assistantMessage`, `thoughtWindow`, `textContent`), `style` / `className` / `styles`, `darkMode`.
 
-**`ChatInputBar`:** `placeholder`, `disclaimer`, `attach`, `voice`, `slots.sendButton`, `style` / `className` / `styles`, `darkMode`.
+`**ChatInputBar`:** `placeholder`, `disclaimer`, `attach`, `voice`, `slots.sendButton`, `style` / `className` / `styles`, `darkMode`.
 
 ### 3. Headless — assemble your own
 
@@ -175,45 +181,53 @@ import { AgentProvider } from "gluon-ai/react";
 
 **Panel / layout**
 
-| Export | Description |
-| ------ | ----------- |
-| `AgentPanel` | Headless skeleton with `data-slot` regions (`agent-panel`, `sidebar`, `main`, `header`, `body`, `input`). No built-in CSS — style via CSS or `classNames` / `styles` / render props |
-| `ChatList` / `ChatListItem` | Chat history list + single row |
+
+| Export                      | Description                                                                                                                                                                         |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AgentPanel`                | Headless skeleton with `data-slot` regions (`agent-panel`, `sidebar`, `main`, `header`, `body`, `input`). No built-in CSS — style via CSS or `classNames` / `styles` / render props |
+| `ChatList` / `ChatListItem` | Chat history list + single row                                                                                                                                                      |
+
 
 **Messages**
 
-| Export | Description |
-| ------ | ----------- |
-| `MessageList` | Scrollable message thread (user + assistant turns) |
-| `UserMessage` | User bubble |
-| `AssistantMessage` | Assistant bubble (text, tools, slots) |
-| `ThoughtWindow` | Reasoning / tool-progress panel |
-| `ConfirmationBlock` | Approval UI when a tool needs confirmation |
-| `ActionBlockSlot` | Renders a registered action-block component for a tool |
+
+| Export              | Description                                            |
+| ------------------- | ------------------------------------------------------ |
+| `MessageList`       | Scrollable message thread (user + assistant turns)     |
+| `UserMessage`       | User bubble                                            |
+| `AssistantMessage`  | Assistant bubble (text, tools, slots)                  |
+| `ThoughtWindow`     | Reasoning / tool-progress panel                        |
+| `ConfirmationBlock` | Approval UI when a tool needs confirmation             |
+| `ActionBlockSlot`   | Renders a registered action-block component for a tool |
+
 
 **Input**
 
-| Export | Description |
-| ------ | ----------- |
-| `ChatInput` | Headless composer (textarea + wiring for send/stop/attach) |
-| `SendButton` / `StopButton` | Send and cancel-run controls |
-| `AttachButton` | File attach control |
-| `RecordButton` / `TranscribeButton` | Voice record / speech-to-text controls |
-| `RecordingIndicator` / `LiveTranscript` | Recording state + live transcript display |
-| `AttachmentChip` | Chip for an attached file |
+
+| Export                                  | Description                                                |
+| --------------------------------------- | ---------------------------------------------------------- |
+| `ChatInput`                             | Headless composer (textarea + wiring for send/stop/attach) |
+| `SendButton` / `StopButton`             | Send and cancel-run controls                               |
+| `AttachButton`                          | File attach control                                        |
+| `RecordButton` / `TranscribeButton`     | Voice record / speech-to-text controls                     |
+| `RecordingIndicator` / `LiveTranscript` | Recording state + live transcript display                  |
+| `AttachmentChip`                        | Chip for an attached file                                  |
+
 
 **Hooks** (use inside `AgentProvider`)
 
-| Export | Description |
-| ------ | ----------- |
-| `useAgentContext` | `adapter`, `basePath`, `actionBlocks`, `suggestedPrompts`, `toolUi` |
-| `useAgentAdapter` | Session/run adapter (messages, send, stop, live events) |
-| `useChatInput` | Controlled composer state |
-| `useChatList` | List / create / switch chats |
-| `useAttachments` | File attachment state for the composer |
-| `useReasoningMode` | Simple / Auto / Think mode |
-| `useRecorder` / `useSpeechTranscriber` | Mic recording + transcription |
-| `useFileExtraction` / `useComposerActions` | File text extraction + composer action helpers |
+
+| Export                                     | Description                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------- |
+| `useAgentContext`                          | `adapter`, `basePath`, `actionBlocks`, `suggestedPrompts`, `toolUi` |
+| `useAgentAdapter`                          | Session/run adapter (messages, send, stop, live events)             |
+| `useChatInput`                             | Controlled composer state                                           |
+| `useChatList`                              | List / create / switch chats                                        |
+| `useAttachments`                           | File attachment state for the composer                              |
+| `useReasoningMode`                         | Simple / Auto / Think mode                                          |
+| `useRecorder` / `useSpeechTranscriber`     | Mic recording + transcription                                       |
+| `useFileExtraction` / `useComposerActions` | File text extraction + composer action helpers                      |
+
 
 Layer 2 components (`ChatTopBar`, `ChatMessageList`, `ChatInputBar`) and `GluonAgentPanel` are also importable here if you want to mix styled pieces with custom layout.
 
@@ -251,23 +265,25 @@ Layer 2 components (`ChatTopBar`, `ChatMessageList`, `ChatInputBar`) and `GluonA
 }
 ```
 
-| Field | What it does |
-| ----- | ------------ |
-| `model` | Model in `provider/model` format. Bare ids like `gpt-4o` are auto-normalized to `openai/gpt-4o` |
-| `reasoningModel` | Model to use in Think mode (`sendReasoning: true`). Must be reasoning-capable (e.g. `openai/o4-mini`). Defaults to `model` |
-| `systemPrompt` | Inline string **or** path to a `.md` / `.txt` file |
-| `tools` | Map of tool name → `defineTool` module path |
-| `skills` | Markdown docs the agent can load via built-in `read_skill` |
-| `context` | Providers called fresh every request; injected under `## Context` |
-| `actionBlocks` | Tool name → React component path for in-stream UI cards |
-| `auth.handler` | `"allow"` \| `"deny"` \| path to a custom handler |
-| `hooks` | Path exporting optional `onRunStart` / `onRunEnd` / `onRunError` |
-| `sendReasoning` | Server default for reasoning stream. Client can override per-message via Think mode |
-| `db.provider` / `db.adapter` | Built-in Prisma provider, or a custom DB adapter path |
-| `suggestedPrompts` | Empty-state chips (also served from `GET …/config`) |
-| `env.*` | Remap env var **names** if yours differ from the defaults |
 
-Full schema: [`packages/core/agent.config.schema.json`](packages/core/agent.config.schema.json)
+| Field                        | What it does                                                                                                               |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `model`                      | Model in `provider/model` format. Bare ids like `gpt-4o` are auto-normalized to `openai/gpt-4o`                            |
+| `reasoningModel`             | Model to use in Think mode (`sendReasoning: true`). Must be reasoning-capable (e.g. `openai/o4-mini`). Defaults to `model` |
+| `systemPrompt`               | Inline string **or** path to a `.md` / `.txt` file                                                                         |
+| `tools`                      | Map of tool name → `defineTool` module path                                                                                |
+| `skills`                     | Markdown docs the agent can load via built-in `read_skill`                                                                 |
+| `context`                    | Providers called fresh every request; injected under `## Context`                                                          |
+| `actionBlocks`               | Tool name → React component path for in-stream UI cards                                                                    |
+| `auth.handler`               | `"allow"` | `"deny"` | path to a custom handler                                                                            |
+| `hooks`                      | Path exporting optional `onRunStart` / `onRunEnd` / `onRunError`                                                           |
+| `sendReasoning`              | Server default for reasoning stream. Client can override per-message via Think mode                                        |
+| `db.provider` / `db.adapter` | Built-in Prisma provider, or a custom DB adapter path                                                                      |
+| `suggestedPrompts`           | Empty-state chips (also served from `GET …/config`)                                                                        |
+| `env.*`                      | Remap env var **names** if yours differ from the defaults                                                                  |
+
+
+Full schema: `[packages/core/agent.config.schema.json](packages/core/agent.config.schema.json)`
 
 ---
 
@@ -349,11 +365,13 @@ When the user selects **Think** in the UI (`useReasoningMode`), the client sends
 2. Streams reasoning tokens live to `ThoughtWindow` as the model thinks
 3. Persists the reasoning alongside the message
 
-| Mode | What happens |
-| ---- | ------------ |
-| Simple | No reasoning stream, tools-only ThoughtWindow |
-| Auto | Uses `sendReasoning` from `agent.config.json` |
-| Think | Forces `sendReasoning: true`, uses `reasoningModel` |
+
+| Mode   | What happens                                        |
+| ------ | --------------------------------------------------- |
+| Simple | No reasoning stream, tools-only ThoughtWindow       |
+| Auto   | Uses `sendReasoning` from `agent.config.json`       |
+| Think  | Forces `sendReasoning: true`, uses `reasoningModel` |
+
 
 ---
 
@@ -525,14 +543,16 @@ export function TokenCounter() {
 npx gluon-ai <command>
 ```
 
-| Command | Flags | Description |
-| ------- | ----- | ----------- |
-| `init [dir]` | `--default` / `-y`, `--development` / `--dev` | Scan project, scaffold files, generate Prisma client, create agent tables, patch next.config |
-| `install [dir]` | `--development` / `--dev` | Run install; `--development` uses `--install-links` for local `file:` packages |
-| `add-tool [name]` | | Scaffold `agent/tools/<name>.ts` + register in config |
-| `add-skill [name]` | | Scaffold `agent/skills/<name>.md` + register in config |
-| `uninstall [dir]` | interactive confirm | Remove scaffolded files, strip patches, uninstall the package |
-| `--help` / `-h` | | Print help |
+
+| Command            | Flags                                         | Description                                                                                  |
+| ------------------ | --------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `init [dir]`       | `--default` / `-y`, `--development` / `--dev` | Scan project, scaffold files, generate Prisma client, create agent tables, patch next.config |
+| `install [dir]`    | `--development` / `--dev`                     | Run install; `--development` uses `--install-links` for local `file:` packages               |
+| `add-tool [name]`  |                                               | Scaffold `agent/tools/<name>.ts` + register in config                                        |
+| `add-skill [name]` |                                               | Scaffold `agent/skills/<name>.md` + register in config                                       |
+| `uninstall [dir]`  | interactive confirm                           | Remove scaffolded files, strip patches, uninstall the package                                |
+| `--help` / `-h`    |                                               | Print help                                                                                   |
+
 
 Uninstall does **not** drop DB tables. Remove them yourself if needed:
 
@@ -550,15 +570,17 @@ npm run gluon:uninstall
 
 ## Package exports
 
-| Import | Use for |
-| ------ | ------- |
-| `gluon-ai` | `defineTool`, shared types (`ActionBlockProps`, `TokenUsage`, …) |
-| `gluon-ai/react` | Provider, panels, hooks, message/input primitives |
-| `gluon-ai/routes` | Catch-all `GET` / `POST` / `DELETE` handlers |
-| `gluon-ai/tool` | Tool helpers / types |
-| `gluon-ai/server` | Commands, queue, Redis, DB adapter types |
-| `gluon-ai/instrumentation` | `register()` — starts the worker |
-| `gluon-ai/cli` | CLI command implementations (used by the `gluon-ai` bin) |
+
+| Import                     | Use for                                                          |
+| -------------------------- | ---------------------------------------------------------------- |
+| `gluon-ai`                 | `defineTool`, shared types (`ActionBlockProps`, `TokenUsage`, …) |
+| `gluon-ai/react`           | Provider, panels, hooks, message/input primitives                |
+| `gluon-ai/routes`          | Catch-all `GET` / `POST` / `DELETE` handlers                     |
+| `gluon-ai/tool`            | Tool helpers / types                                             |
+| `gluon-ai/server`          | Commands, queue, Redis, DB adapter types                         |
+| `gluon-ai/instrumentation` | `register()` — starts the worker                                 |
+| `gluon-ai/cli`             | CLI command implementations (used by the `gluon-ai` bin)         |
+
 
 API surface under the catch-all (last path segment): `events`, `thread`, `chats`, `commands`, `config`.
 

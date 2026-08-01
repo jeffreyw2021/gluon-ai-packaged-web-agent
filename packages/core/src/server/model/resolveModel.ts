@@ -1,6 +1,6 @@
 
 import type { LanguageModel } from "ai";
-import { getAiGateway } from "./aiGateway";
+import { resolveGatewayKey, getAiGateway } from "./aiGateway";
 
 /**
  * Normalize a model id to the gateway `provider/model` format.
@@ -28,16 +28,50 @@ export function modelProvider(normalizedId: string): string | undefined {
 }
 
 /**
- * Resolve a model id string to an AI SDK LanguageModel via the gateway.
- * Bare ids are normalized to the "openai/…" prefix automatically.
+ * Resolve a model id string to an AI SDK LanguageModel.
+ *
+ * Resolution strategy:
+ *   1. If VERCEL_AI_GATEWAY_API_KEY (or AI_GATEWAY_API_KEY) is set →
+ *      route all providers through the Vercel AI Gateway.
+ *   2. Otherwise, for "openai/*" models → use @ai-sdk/openai directly
+ *      with OPENAI_API_KEY. This is the backward-compatible path for
+ *      users who only have an OpenAI key.
+ *   3. Other providers without a gateway key → throw a clear error.
  *
  * @example
  *   getLanguageModel("openai/gpt-4o")
- *   getLanguageModel("anthropic/claude-sonnet-4-6")
- *   getLanguageModel("google/gemini-2.0-flash")
+ *   getLanguageModel("anthropic/claude-sonnet-4.6") // requires gateway key
  *   getLanguageModel("gpt-4o")  // backward compat — treated as openai/gpt-4o
  */
 export function getLanguageModel(modelId: string): LanguageModel {
   const normalized = normalizeModelId(modelId);
-  return getAiGateway()(normalized) as LanguageModel;
+  const provider = modelProvider(normalized);
+
+  // Gateway path: VERCEL_AI_GATEWAY_API_KEY (or AI_GATEWAY_API_KEY) is set
+  if (resolveGatewayKey()) {
+    return getAiGateway()(normalized) as LanguageModel;
+  }
+
+  // Direct OpenAI fallback: no gateway key but OPENAI_API_KEY is present
+  if (provider === "openai") {
+    const openaiKey = process.env.OPENAI_API_KEY?.trim();
+    if (!openaiKey) {
+      throw new Error(
+        "[gluon-ai] Neither VERCEL_AI_GATEWAY_API_KEY nor OPENAI_API_KEY is set. " +
+          "Set one of them to run the agent.",
+      );
+    }
+    // Dynamic import so @ai-sdk/openai stays an optional peer when using gateway
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { createOpenAI } = require("@ai-sdk/openai") as typeof import("@ai-sdk/openai");
+    const openai = createOpenAI({ apiKey: openaiKey });
+    const modelName = normalized.slice("openai/".length);
+    return openai(modelName) as LanguageModel;
+  }
+
+  // Non-OpenAI provider without a gateway key
+  throw new Error(
+    `[gluon-ai] Model "${normalized}" requires VERCEL_AI_GATEWAY_API_KEY. ` +
+      "Set it to use providers other than OpenAI.",
+  );
 }
