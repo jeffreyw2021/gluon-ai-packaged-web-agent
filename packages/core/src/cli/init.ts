@@ -447,15 +447,113 @@ GLUON_CORS_ORIGIN=*
 `;
 }
 
-// ── Proxy snippet printer ──────────────────────────────────────────────────
+// ── Proxy auto-patcher ─────────────────────────────────────────────────────
 
-function printProxySnippet(
+/**
+ * Try to patch a Next.js config file to add the gluon proxy rewrite.
+ * Returns true if the config was patched or was already configured.
+ */
+function patchNextConfig(root: string, port: number): boolean {
+  const candidates = ["next.config.ts", "next.config.js", "next.config.mjs"];
+  const configFile = candidates.find((f) => exists(path.join(root, f)));
+  if (!configFile) return false;
+
+  const configPath = path.join(root, configFile);
+  let content = read(configPath);
+
+  if (content.includes("/api/gluon")) {
+    log("skip", `${configFile} (gluon proxy already configured)`);
+    return true;
+  }
+
+  const rewrite = `{ source: "/api/gluon/:path*", destination: "http://localhost:${port}/:path*" }`;
+  const rewriteBlock = `  async rewrites() {\n    return [${rewrite}];\n  },\n`;
+
+  // Pattern A: empty config object `= {}`
+  const emptyObjRe = /(const nextConfig[^=]*=\s*)\{\s*\}/;
+  if (emptyObjRe.test(content)) {
+    content = content.replace(emptyObjRe, `$1{\n${rewriteBlock}}`);
+    fs.writeFileSync(configPath, content, "utf-8");
+    log("write", configPath);
+    return true;
+  }
+
+  // Pattern B: config has options but no rewrites — inject before the closing `};`
+  if (!content.includes("rewrites")) {
+    const closingRe = /\n\};\s*\n(export default nextConfig)/;
+    if (closingRe.test(content)) {
+      content = content.replace(closingRe, `\n${rewriteBlock}};\n$1`);
+      fs.writeFileSync(configPath, content, "utf-8");
+      log("write", configPath);
+      return true;
+    }
+  }
+
+  // Pattern C: already has rewrites() — inject our entry into the return array
+  const returnArrayRe = /(async\s+rewrites\s*\(\s*\)\s*\{[\s\S]*?return\s*\[)([\s\S]*?)(\])/;
+  if (returnArrayRe.test(content)) {
+    content = content.replace(
+      returnArrayRe,
+      (_, pre, items, close) => {
+        const sep = items.trim().length > 0 ? ",\n        " : "\n        ";
+        return `${pre}${items.trimEnd()}${sep}${rewrite},\n      ${close}`;
+      },
+    );
+    fs.writeFileSync(configPath, content, "utf-8");
+    log("write", configPath);
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Try to patch a Vite config file to add the gluon dev-server proxy.
+ * Returns true if the config was patched or was already configured.
+ */
+function patchViteConfig(root: string, port: number): boolean {
+  const candidates = ["vite.config.ts", "vite.config.js", "vite.config.mjs"];
+  const configFile = candidates.find((f) => exists(path.join(root, f)));
+  if (!configFile) return false;
+
+  const configPath = path.join(root, configFile);
+  const content = read(configPath);
+
+  if (content.includes("/api/gluon")) {
+    log("skip", `${configFile} (gluon proxy already configured)`);
+    return true;
+  }
+
+  // Vite configs are too varied — just print the snippet
+  return false;
+}
+
+/**
+ * Apply same-origin proxy config automatically where possible, otherwise
+ * print manual instructions.
+ * Returns the basePath to use in GluonAgentPanel.
+ */
+function applyProxyConfig(
   framework: ScanResult["hostFramework"],
+  root: string,
   port: number,
-): void {
-  if (!framework) return;
+): string {
+  if (!framework) return `http://localhost:${port}`;
 
-  console.log("  ── Recommended: same-origin proxy ──────────────────────────\n");
+  let patched = false;
+
+  if (framework === "nextjs") {
+    patched = patchNextConfig(root, port);
+  } else if (framework === "vite" || framework === "sveltekit") {
+    patched = patchViteConfig(root, port);
+  }
+
+  if (patched) {
+    return "/api/gluon";
+  }
+
+  // Auto-patch failed — print manual instructions
+  console.log("  ── Same-origin proxy (recommended) ─────────────────────────\n");
   console.log(
     "  Point your frontend at /api/gluon (no CORS) instead of the\n" +
       `  container directly (http://localhost:${port}).\n`,
@@ -468,7 +566,6 @@ function printProxySnippet(
       return [{ source: '/api/gluon/:path*', destination: 'http://localhost:${port}/:path*' }]
     }
 `);
-    console.log('  Then: <GluonAgentPanel basePath="/api/gluon" />\n');
   } else if (framework === "vite") {
     console.log("  In vite.config.ts → server.proxy:");
     console.log(`
@@ -476,23 +573,21 @@ function printProxySnippet(
       proxy: { '/api/gluon': { target: 'http://localhost:${port}', changeOrigin: true } }
     }
 `);
-    console.log('  Then: <GluonAgentPanel basePath="/api/gluon" />\n');
   } else if (framework === "remix") {
     console.log(
-      "  Add a Remix resource route at app/routes/api.gluon.$.ts that\n" +
-        `  proxies to http://localhost:${port}.\n`,
+      "  Add a Remix resource route at app/routes/api.gluon.$.ts\n" +
+        `  that proxies to http://localhost:${port}.\n`,
     );
-    console.log('  Then: <GluonAgentPanel basePath="/api/gluon" />\n');
   } else if (framework === "sveltekit") {
-    console.log("  In svelte.config.js → kit.server.proxy (or hooks.server.ts):");
+    console.log("  In vite.config.ts → server.proxy:");
     console.log(`
-    // vite proxy via svelte.config.js vitePlugin option or vite.config.ts
     server: {
       proxy: { '/api/gluon': { target: 'http://localhost:${port}', changeOrigin: true } }
     }
 `);
-    console.log('  Then: <GluonAgentPanel basePath="/api/gluon" />\n');
   }
+
+  return "/api/gluon";
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
@@ -553,6 +648,10 @@ export async function initCommand(
   // .env.example (at project root)
   write(path.join(root, ".env.example"), envExampleTemplate(answers));
 
+  // ── Proxy config (auto-patch or print snippet) ───────────────────────────
+
+  const basePath = applyProxyConfig(scan.hostFramework, root, answers.port);
+
   // ── Summary ──────────────────────────────────────────────────────────────
 
   const provider = PROVIDERS[answers.providerIndex];
@@ -567,15 +666,13 @@ export async function initCommand(
 
   2. docker compose -f gluon/docker-compose.yml up -d
 
-  3. Add <GluonAgentPanel basePath="http://localhost:${answers.port}" /> to your frontend
-     (or set up a proxy — see below)
+  3. Add to your frontend:
+     <GluonAgentPanel basePath="${basePath}" />
 
   4. Customize gluon/agent/system-prompt.md and gluon/agent/tools/
 
   Health check: curl http://localhost:${answers.port}/config
 `);
-
-  printProxySnippet(scan.hostFramework, answers.port);
 
   console.log(
     "  To add tools later:  npx gluon-ai add-tool <name>\n" +
