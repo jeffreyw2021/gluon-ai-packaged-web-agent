@@ -236,16 +236,19 @@ function agentConfigTemplate(answers: Answers): string {
   return JSON.stringify(cfg, null, 2);
 }
 
-function dockerfileTemplate(): string {
+function dockerfileTemplate(sdkPackage?: string): string {
+  const globalPkgs = ["gluon-ai@beta", "tsx", "prisma@6", sdkPackage].filter(Boolean).join(" ");
   return `FROM node:24-slim
 
 # Prisma's query engine binary requires OpenSSL at runtime
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Install gluon-ai + tsx + prisma@6 globally.
+# Install gluon-ai + tsx + prisma@6 + the chosen AI provider SDK globally.
 # Pinning prisma@6 matches gluon-ai's schema format — Prisma 7 changed the
 # datasource schema syntax and is not compatible with the bundled schema.prisma.
-RUN npm install -g gluon-ai@beta tsx prisma@6
+# The provider SDK (e.g. @ai-sdk/openai) must be globally installed so the
+# worker process can require() it from the gluon-ai global package location.
+RUN npm install -g ${globalPkgs}
 
 # Generate the Prisma client for this platform (Linux/amd64 binaries).
 # Must run after the global install so the correct schema.prisma is in place.
@@ -513,17 +516,18 @@ export async function initCommand(
     "─────────────────────────────────────────────────────────────\n",
   );
 
+  const sdkPkg = PROVIDERS[answers.providerIndex].sdkPackage || undefined;
+
   // gluon/agent.config.json
   write(path.join(gluonDir, "agent.config.json"), agentConfigTemplate(answers));
 
   // gluon/Dockerfile
-  write(path.join(gluonDir, "Dockerfile"), dockerfileTemplate());
+  write(path.join(gluonDir, "Dockerfile"), dockerfileTemplate(sdkPkg));
 
   // gluon/docker-compose.yml
   write(path.join(gluonDir, "docker-compose.yml"), dockerComposeTemplate(answers.port));
 
   // gluon/agent/package.json
-  const sdkPkg = PROVIDERS[answers.providerIndex].sdkPackage || undefined;
   write(path.join(gluonDir, "agent", "package.json"), agentPackageJsonTemplate(sdkPkg));
 
   // gluon/agent/system-prompt.md
