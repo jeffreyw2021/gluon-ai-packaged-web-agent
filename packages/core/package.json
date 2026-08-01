@@ -1,6 +1,6 @@
 {
   "name": "gluon-ai",
-  "version": "0.1.0-beta.74",
+  "version": "0.1.0-beta.75",
   "description": "Drop-in AI chat agent for Next.js — streaming, multi-chat, tool use, configuration-first",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -42,6 +42,9 @@
     "./cli": {
       "require": "./dist/cli.js",
       "types": "./dist/cli.d.ts"
+    },
+    "./app": {
+      "require": "./dist/app.js"
     }
   },
   "files": [
@@ -77,6 +80,9 @@
     "react-dom": ">=19"
   },
   "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    },
     "@ai-sdk/anthropic": {
       "optional": true
     },
@@ -100,10 +106,12 @@
     }
   },
   "dependencies": {
+    "@hono/node-server": "^2.0.12",
     "@prisma/client": "^6.8.2",
     "@tanstack/react-query": "^5.76.2",
     "ai": "^6.0.237",
     "bullmq": "^5.34.8",
+    "hono": "^4.12.33",
     "ioredis": "^5.6.0",
     "jotai": "^2.12.5",
     "lucide-react": "^1.27.0",
@@ -117,11 +125,11 @@
   },
   "devDependencies": {
     "@ai-sdk/anthropic": "^4.0.27",
-    "@ai-sdk/openai": "^3.0.89",
     "@ai-sdk/deepseek": "^3.0.19",
     "@ai-sdk/google": "^4.0.31",
     "@ai-sdk/groq": "^4.0.19",
     "@ai-sdk/mistral": "^4.0.20",
+    "@ai-sdk/openai": "^3.0.89",
     "@ai-sdk/xai": "^4.0.25",
     "@types/node": "^22",
     "@types/react": "^19",

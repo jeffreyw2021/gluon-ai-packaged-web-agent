@@ -2,7 +2,9 @@
 
 > **Beta** project, rough edges expected.
 
-Sometimes you want to build an AI-native product from scratch. Sometimes you just want an agent inside an existing product. The backend for that second case is mostly the same every time: chats, streaming, tools, a worker, Redis, a DB. Gluon packages that stack so you can drop an agent into a Next.js app and focus on the product side.
+Sometimes you want to build an AI-native product from scratch. Sometimes you just want an agent inside an existing product. The backend for that second case is mostly the same every time: chats, streaming, tools, a worker, Redis, a DB. Gluon packages that stack — as a standalone Docker container — so you can drop an agent into any web app and focus on the product side.
+
+Works with any React frontend: Next.js, Vite, Remix, SvelteKit, or anything else.
 
 Built for myself. Shared in case it's useful.
 
@@ -10,90 +12,247 @@ Built for myself. Shared in case it's useful.
 
 ## Compatibility
 
-**Next.js only** for now.
 
-
-| Requirement | Notes                                                                                                                         |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Next.js 15+ | App Router                                                                                                                    |
-| React 19+   |                                                                                                                               |
-| PostgreSQL  | Best supported. MySQL / SQLite available via init; less battle-tested                                                         |
-| Redis       | Required for the BullMQ worker + live events                                                                                  |
-| AI provider | OpenAI, Anthropic, Google, Mistral, Groq, xAI, DeepSeek, or Vercel AI Gateway. See [AI model providers](#ai-model-providers) |
+| Requirement                | Notes                                                                                                                         |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Any React 19+ frontend     | Next.js, Vite, Remix, SvelteKit, or a plain React app                                                                       |
+| Docker (local dev)         | For local development via `docker compose`. Not required in production — `gluon-ai start` runs as a plain Node process too   |
+| PostgreSQL                 | Bundled in the dev compose file. In production: any managed Postgres (RDS, Neon, Cloud SQL, etc.)                            |
+| Redis                      | Bundled in the dev compose file. In production: any Redis-compatible service (Upstash, ElastiCache, etc.)                    |
+| AI provider                | OpenAI, Anthropic, Google, Mistral, Groq, xAI, DeepSeek, or Vercel AI Gateway. See [AI model providers](#ai-model-providers) |
 
 
 ---
 
 ## Quick start
 
+### Step 1 — Install
+
 ```bash
 npm install gluon-ai@beta
 ```
 
-> **Package manager:** npm is the supported path for host apps right now. pnpm can install the package, but init / Prisma generate / local `file:` linking (`--development`) are npm-first and often break under pnpm’s store layout. Use npm for consumer projects until that’s fixed.
+This puts the React components (`gluon-ai/react`) into your project and makes the CLI available locally so the next step uses your installed version.
 
-Put secrets in `.env` / `.env.local` **before** init (the wizard detects existing names):
-
-```env
-<MODEL PROVIDER>_API_KEY=sk-...
-
-AGENT_DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
-REDIS_URL=redis://localhost:6379
-```
-
-> Set at least one provider key before running init. See [AI model providers](#ai-model-providers) for the full list.
+### Step 2 — Scaffold
 
 ```bash
-npx gluon-ai init          # interactive
-# or
-npx gluon-ai init --default   # accept all defaults (-y also works)
+npx gluon-ai init
 ```
 
+Three prompts: AI provider, model, and port. Done. The wizard generates a `gluon/` folder alongside your app:
+
+```
+your-project/
+  gluon/
+    agent.config.json          ← model, tools, context, auth
+    Dockerfile                 ← installs gluon-ai@beta; CMD gluon-ai start
+    docker-compose.yml         ← gluon + postgres:17 + redis:8
+    agent/
+      package.json             ← { "type": "module" }
+      system-prompt.md
+      tools/webSearch.ts       ← uses defineTool from "gluon-ai"
+      context/datetime.ts
+  .env.example                 ← pre-filled defaults for compose infra
+```
+
+### Step 3 — Configure and start
+
 ```bash
-npm run dev
+cp .env.example .env   # fill in your AI provider key — the only required value
+docker compose -f gluon/docker-compose.yml up -d
+```
+
+The container starts, applies the DB schema automatically (idempotent SQL), and starts the BullMQ worker. Health check:
+
+```bash
+curl http://localhost:3001/config
+```
+
+### Step 4 — Add to your frontend
+
+`gluon-ai` is already installed from Step 1:
+
+```tsx
+import { GluonAgentPanel } from "gluon-ai/react";
+
+// Direct (simplest — requires GLUON_CORS_ORIGIN=* in .env):
+<GluonAgentPanel basePath="http://localhost:3001" />
+
+// Or proxy through your own server (no CORS needed — see below):
+<GluonAgentPanel basePath="/api/gluon" />
 ```
 
 That's enough for a working agent with web search, multi-chat, streaming, and the background worker.
 
 ---
 
-## What init scaffolds
+## Deployment modes
 
+Docker is not required to run Gluon. `gluon-ai start` is a plain Node.js process — the Dockerfile that `init` generates is one convenient packaging option, not a prerequisite.
 
-| Path                        | Purpose                                                                                |
-| --------------------------- | -------------------------------------------------------------------------------------- |
-| `agent.config.json`         | Model, tools, auth, prompts, env remaps                                                |
-| `agent/package.json`        | `{ "type": "module" }`; silences Node ESM warnings when loading tools                  |
-| `agent/system-prompt.md`    | Default system prompt (edit this freely)                                               |
-| `agent/tools/webSearch.ts`  | Example tool (OpenAI-native web search; requires `OPENAI_API_KEY` + `@ai-sdk/openai`)  |
-| `agent/context/datetime.ts` | Example context provider (current date/time)                                           |
-| `[app                       | src/app]/api/gluon-ai/[[...path]]/route.ts`                                            |
-| `instrumentation.ts`        | Starts the BullMQ worker on Next.js boot                                               |
+### Mode A — Same server, no Docker (EC2, bare VM, any VPS)
 
+Run Gluon as a sibling process on the same machine as your app:
 
-Also:
-
-- Patches `next.config` with `serverExternalPackages: ["gluon-ai"]`
-- Adds `gluon:uninstall` to your `package.json` scripts
-- Creates agent tables (`gluon_chat`, `gluon_chat_job_run`) with idempotent SQL. Your existing Prisma schema is never modified
-
-```
-agent/
-  package.json          # { "type": "module" }; required for Node dynamic imports
-  system-prompt.md
-  tools/
-    webSearch.ts
-  context/
-    datetime.ts
-  skills/          # you create these (npx gluon-ai add-skill)
-  blocks/          # you create these (action block components)
-
-agent.config.json
-instrumentation.ts
-[app]/api/gluon-ai/[[...path]]/route.ts
+```bash
+npm install -g gluon-ai@beta tsx
+pm2 start "gluon-ai start" --name gluon
 ```
 
-> **Local package development:** if you're linking a `file:` copy of gluon into an app and Turbopack can't resolve subpath exports, use `npx gluon-ai init --default --development` (or `npx gluon-ai install --development`). That reinstalls with `--install-links` so deps are copied into `node_modules` instead of symlinked.
+Set env vars on the server:
+
+```env
+AGENT_DATABASE_URL=postgresql://...    # RDS, Cloud SQL, or same DB the app uses
+REDIS_URL=redis://...                  # ElastiCache, Upstash, or existing Redis
+OPENAI_API_KEY=...
+PORT=3001
+GLUON_CORS_ORIGIN=https://myapp.com
+```
+
+In tools, call the host app at `http://localhost:3000` — zero network overhead.
+
+### Mode B — Docker Compose sidecar (host app already uses Docker)
+
+Add Gluon as one more service to your existing `docker-compose.yml`:
+
+```yaml
+services:
+  myapp:
+    build: .
+    ports: ["3000:3000"]
+
+  gluon:
+    build: ./gluon
+    expose: ["3001"]              # internal only — not exposed to the internet
+    environment:
+      AGENT_DATABASE_URL: postgresql://user:pass@postgres:5432/mydb  # SAME DB
+      REDIS_URL: redis://redis:6379                                    # SAME Redis
+      GLUON_CORS_ORIGIN: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+```
+
+Tools call the host app at `http://myapp:3000` (Docker service name), ~0.5 ms.
+
+### Mode C — Standalone container (serverless host app)
+
+If the host backend is on Vercel, AWS Lambda, or another serverless platform, deploy Gluon as a separate container service (Cloud Run, Railway, Fly.io, ECS Fargate):
+
+```bash
+docker build -f gluon/Dockerfile gluon/ -t my-app-gluon:latest
+# Deploy to Cloud Run / Railway / Fly.io / ECS Fargate
+
+# Proxy through your Next.js rewrite (keeps same-origin, no CORS in browser):
+# next.config.ts → rewrites: [{ source: '/api/gluon/:path*', destination: `${process.env.GLUON_URL}/:path*` }]
+```
+
+### Platform decision guide
+
+| Host app deployment          | Gluon deployment                               | Latency to host app        |
+| ---------------------------- | ---------------------------------------------- | -------------------------- |
+| Bare VM / EC2 (no Docker)    | `pm2 start "gluon-ai start"` on same server    | ~0 ms (localhost)          |
+| Docker Compose               | Add `gluon` service to existing compose        | ~0.5 ms (Docker network)   |
+| Kubernetes                   | Sidecar container in same pod                  | ~0 ms (loopback)           |
+| ECS / Cloud Run              | Second container in same task / same region    | ~0.5–2 ms                  |
+| Vercel / serverless          | Separate container on Railway / Fly / Cloud Run | ~5–30 ms (cross-service)   |
+| Railway / Render / Fly       | Additional service in same project             | ~1–2 ms (internal network) |
+
+---
+
+## Tool data access patterns
+
+Tools run inside the Gluon container, not inside your host app. Two patterns cover virtually all data access needs, both with negligible latency in sidecar mode.
+
+### Pattern 1: Shared database URL (recommended for read-heavy tools)
+
+Point `AGENT_DATABASE_URL` at the same database your host app uses. Tools connect directly with their preferred client:
+
+```typescript
+// gluon/agent/tools/readUser.ts
+import { defineTool } from "gluon-ai";
+import { z } from "zod";
+import postgres from "postgres"; // install in gluon/agent/package.json
+
+const sql = postgres(process.env.AGENT_DATABASE_URL!);
+
+export default defineTool({
+  description: "Look up a user by email",
+  inputSchema: z.object({ email: z.string() }),
+  execute: async ({ email }) => {
+    return sql`SELECT id, name FROM users WHERE email = ${email}`;
+  },
+});
+```
+
+In sidecar mode, latency is identical to the host app querying the same DB. Any DB client works: Drizzle, Prisma (with host schema), Kysely, raw `pg`.
+
+### Pattern 2: HTTP to host app's internal API (recommended for write operations or business logic)
+
+Call an internal endpoint on the host app. In sidecar mode, this is `http://myapp:3000` — a Docker network call, ~0.5 ms:
+
+```typescript
+// gluon/agent/tools/createPost.ts
+export default defineTool({
+  description: "Create a blog post on behalf of the user",
+  inputSchema: z.object({ title: z.string(), body: z.string() }),
+  execute: async ({ title, body }, { userId }) => {
+    const res = await fetch("http://myapp:3000/api/internal/posts", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-internal-token": process.env.INTERNAL_TOKEN!,
+      },
+      body: JSON.stringify({ title, body, userId }),
+    });
+    return res.json();
+  },
+});
+```
+
+Expose `/api/internal/*` routes protected by a shared secret — only reachable within the Docker network, not from the internet.
+
+### Latency comparison
+
+| Access pattern        | Sidecar container    | Standalone container  |
+| --------------------- | -------------------- | --------------------- |
+| DB query in tool      | ~0.5 ms (Docker net) | ~5–50 ms (real net)   |
+| Host app API in tool  | ~0.5 ms (Docker net) | ~5–50 ms (real net)   |
+| LLM API call          | same                 | same                  |
+
+For most agent use cases, LLM calls dominate at 500–2000 ms. The ~0.5 ms Docker network overhead is irrelevant.
+
+---
+
+## Same-origin proxy (recommended for production)
+
+Point the frontend at `/api/gluon` instead of the container directly — this avoids exposing the container port to the internet and eliminates CORS configuration.
+
+**Next.js** (`next.config.ts`):
+
+```typescript
+async rewrites() {
+  return [{ source: "/api/gluon/:path*", destination: "http://localhost:3001/:path*" }];
+}
+```
+
+**Vite** (`vite.config.ts`):
+
+```typescript
+server: {
+  proxy: { "/api/gluon": { target: "http://localhost:3001", changeOrigin: true } }
+}
+```
+
+Then use `basePath="/api/gluon"` instead of the full URL:
+
+```tsx
+<GluonAgentPanel basePath="/api/gluon" />
+```
+
+`npx gluon-ai init` detects your framework and prints the matching snippet automatically.
 
 ---
 
@@ -781,14 +940,15 @@ npx gluon-ai <command>
 ```
 
 
-| Command            | Flags                                         | Description                                                                                  |
-| ------------------ | --------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `init [dir]`       | `--default` / `-y`, `--development` / `--dev` | Scan project, scaffold files, generate Prisma client, create agent tables, patch next.config |
-| `install [dir]`    | `--development` / `--dev`                     | Run install; `--development` uses `--install-links` for local `file:` packages               |
-| `add-tool [name]`  |                                               | Scaffold `agent/tools/<name>.ts` + register in config                                        |
-| `add-skill [name]` |                                               | Scaffold `agent/skills/<name>.md` + register in config                                       |
-| `uninstall [dir]`  | interactive confirm                           | Remove scaffolded files, strip patches, uninstall the package                                |
-| `--help` / `-h`    |                                               | Print help                                                                                   |
+| Command            | Flags                                         | Description                                                                                     |
+| ------------------ | --------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `start`            |                                               | Boot the Hono server + BullMQ worker. Used as CMD in the Dockerfile; also works with pm2       |
+| `init [dir]`       | `--default` / `-y`, `--development` / `--dev` | Scaffold `gluon/` folder with Dockerfile, docker-compose.yml, agent.config.json, and agent/    |
+| `install [dir]`    | `--development` / `--dev`                     | Run install; `--development` uses `--install-links` for local `file:` packages                  |
+| `add-tool [name]`  |                                               | Scaffold `agent/tools/<name>.ts` + register in config                                           |
+| `add-skill [name]` |                                               | Scaffold `agent/skills/<name>.md` + register in config                                          |
+| `uninstall [dir]`  | interactive confirm                           | Remove scaffolded files and uninstall the package                                               |
+| `--help` / `-h`    |                                               | Print help                                                                                      |
 
 
 Uninstall does **not** drop DB tables. Remove them yourself if needed:
@@ -808,15 +968,16 @@ npm run gluon:uninstall
 ## Package exports
 
 
-| Import                     | Use for                                                          |
-| -------------------------- | ---------------------------------------------------------------- |
-| `gluon-ai`                 | `defineTool`, shared types (`ActionBlockProps`, `TokenUsage`, …) |
-| `gluon-ai/react`           | Provider, panels, hooks, message/input primitives                |
-| `gluon-ai/routes`          | Catch-all `GET` / `POST` / `DELETE` handlers                     |
-| `gluon-ai/tool`            | Tool helpers / types                                             |
-| `gluon-ai/server`          | Commands, queue, Redis, DB adapter types                         |
-| `gluon-ai/instrumentation` | `register()` starts the worker                                   |
-| `gluon-ai/cli`             | CLI command implementations (used by the `gluon-ai` bin)         |
+| Import                     | Use for                                                                       |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| `gluon-ai`                 | `defineTool`, shared types (`ActionBlockProps`, `TokenUsage`, …)              |
+| `gluon-ai/react`           | Provider, panels, hooks, message/input primitives                             |
+| `gluon-ai/app`             | Hono server entry — used internally by `gluon-ai start`                       |
+| `gluon-ai/routes`          | Catch-all `GET` / `POST` / `DELETE` handlers (for custom server integration)  |
+| `gluon-ai/tool`            | Tool helpers / types                                                          |
+| `gluon-ai/server`          | Commands, queue, Redis, DB adapter types                                      |
+| `gluon-ai/instrumentation` | `register()` starts the worker (Next.js embedded mode — still supported)      |
+| `gluon-ai/cli`             | CLI command implementations (used by the `gluon-ai` bin)                     |
 
 
 API surface under the catch-all (last path segment): `events`, `thread`, `chats`, `commands`, `config`.
@@ -825,9 +986,10 @@ API surface under the catch-all (last path segment): `events`, `thread`, `chats`
 
 ## Currently working on
 
-- Framework portability beyond Next.js
+- `gluon-ai dev` watch command (restart container on agent/ file changes)
+- `gluon-ai logs` convenience wrapper for `docker compose logs -f gluon`
+- GHCR base image (`ghcr.io/gluon-ai/server:beta`) so compose can use `image:` instead of `build:` — eliminates the npm install build time entirely
 - More polished default UI affordances
-- Setup UX (possibly a visual wizard)
 - Stability, tests, and multi-DB edge cases
 
 ---

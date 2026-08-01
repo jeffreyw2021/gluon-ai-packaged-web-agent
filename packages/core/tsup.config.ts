@@ -77,4 +77,11 @@ export default defineConfig([
     sourcemap: false,
     external: [...serverExternal, "node:fs", "node:path"],
   },
+  {
+    entry: { app: "src/app.ts" },
+    format: ["cjs"],
+    dts: false,
+    sourcemap: false,
+    external: [...serverExternal, "hono", "@hono/node-server"],
+  },
 ]);

@@ -1,24 +1,23 @@
 #!/usr/bin/env node
 // gluon-ai CLI — `npx gluon-ai`
 
-const { initCommand, installCommand, addToolCommand, addSkillCommand, uninstallCommand } = require("../dist/cli.js");
+const { initCommand, startCommand, installCommand, addToolCommand, addSkillCommand, uninstallCommand } = require("../dist/cli.js");
 
 const HELP = `
-gluon-ai — drop-in AI chat agent for Next.js
+gluon-ai — framework-agnostic AI agent backend
 
 Commands:
-  init [dir] [--default] [--development]
-                         Interactive setup: scan project, prompt for env var names,
-                         generate package Prisma client, push agent tables to DB,
-                         scaffold the catch-all route + instrumentation.
-                         --default     Skip all prompts and use auto-detected values.
-                         --development Re-installs local file: packages with --install-links
-                                       so Turbopack can resolve them within the project root.
+  start                  Boot the Gluon server (Hono + BullMQ worker).
+                         Used as CMD in the scaffolded Dockerfile.
+                         Also works directly: pm2 start "gluon-ai start"
+
+  init [dir] [--default] Interactive setup: scaffold gluon/ folder with Dockerfile,
+                         docker-compose.yml, agent.config.json, and agent/ files.
+                         --default     Skip all prompts and use defaults.
 
   install [dir] [--development]
                          Run npm install. --development copies local file: packages
-                         (--install-links) instead of symlinking — required for Turbopack
-                         when testing the package locally before publishing.
+                         (--install-links) instead of symlinking.
 
   add-tool [name]        Scaffold a new tool file and register it in agent.config.json
   add-skill [name]       Scaffold a new skill .md file and register it in agent.config.json
@@ -26,9 +25,9 @@ Commands:
                          Agent DB tables (gluon_chat, gluon_chat_job_run) are not dropped.
 
 Examples:
+  gluon-ai start
+  npx gluon-ai init
   npx gluon-ai init --default
-  npx gluon-ai init --default --development   (local dev — copies instead of symlinks)
-  npx gluon-ai install --development          (just the copy-install step)
   npx gluon-ai add-tool search_docs
   npx gluon-ai add-skill how-to-format-output
   npx gluon-ai uninstall
@@ -38,6 +37,10 @@ async function main() {
   const [, , command, ...args] = process.argv;
 
   switch (command) {
+    case "start": {
+      startCommand();
+      break;
+    }
     case "init": {
       const useDefaults = args.includes("--default") || args.includes("-y");
       const development = args.includes("--development") || args.includes("--dev");
