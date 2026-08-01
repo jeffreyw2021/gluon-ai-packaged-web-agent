@@ -940,7 +940,9 @@ export function ChatMessageList({
     minHeight: 0,
     overflowY: "auto",
     paddingTop: "1rem",
-    paddingBottom: _isEmpty ? 0 : "1rem",
+    // Keep a small container pad; MessageList's end spacer (afterLast) provides
+    // the main breathing room below the final message.
+    paddingBottom: _isEmpty ? 0 : "0.5rem",
     paddingLeft: _isEmpty ? "0.625rem" : "1rem",
     paddingRight: _isEmpty ? "0.625rem" : "1rem",
     scrollbarWidth: "none",
@@ -999,7 +1001,9 @@ export function ChatMessageList({
             awaitingApprovalId={awaitingApprovalId ?? null}
             onApprove={submitToolApproval ?? (() => Promise.resolve())}
             autoScroll={autoScroll}
-            style={{ display: "flex", flexDirection: "column", height: "100%" }}
+            // minHeight (not height): list must grow with content so the end
+            // spacer contributes to scrollHeight and isn't clipped.
+            style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}
             components={{
               UserMessage: (slots?.userMessage ??
                 StyledUserMessage) as ComponentType<UserMessageProps>,
