@@ -505,25 +505,59 @@ export default async function (): Promise<string> {
 
 ## Auth
 
-Default is `"allow"` (every request is user `"anon"` — fine for local / single-user).
+### Default behaviour (no config needed)
 
-For production, point `auth.handler` at a module that **default-exports** an async function:
+Out of the box, all requests are **allowed without a check** and attributed to the user ID `"anon"`. Every chat session, message, and run is stored under that single identity. This is fine for local development, internal tools, or single-user demos.
 
-```typescript
-// agent/auth.ts
-import { auth } from "@/auth";
+### Adding an auth gate
 
-export default async function (req: Request): Promise<string | boolean | null> {
-  const session = await auth();
-  return session?.user?.id ?? null; // string → allow as that userId; null → 401
-}
-```
+Wire in your own auth logic by creating a handler module and pointing `agent.config.json` at it:
 
 ```json
 { "auth": { "handler": "./agent/auth.ts" } }
 ```
 
-Return values: `string` (userId), `true` (`"anon"`), `false` / `null` (401).
+The handler is a TypeScript file that **default-exports** an async function receiving the raw `Request`. Return a value to tell Gluon what to do:
+
+| Return value | Effect |
+| ------------ | ------ |
+| `string` (non-empty) | Request is allowed; the string is used as the **userId** (scopes chat history, runs, etc.) |
+| `true` | Request is allowed as the anonymous user `"anon"` |
+| `false` or `null` | Request is **rejected with HTTP 401** |
+
+```typescript
+// agent/auth.ts  — example using NextAuth v5
+import { auth } from "@/auth";
+
+export default async function (req: Request): Promise<string | boolean | null> {
+  const session = await auth();
+  return session?.user?.id ?? null;
+  // → returns the user's ID when signed in, null (→ 401) when not
+}
+```
+
+### What the userId controls
+
+Once a userId is returned, Gluon:
+- **Scopes all chat sessions** to that userId — users only see their own chat history.
+- **Scopes all run records** to that userId — billing, rate-limiting, and logs are per-user.
+- Passes the userId to **context providers** and **tool handlers** via `req.gluon.userId` so your server-side code can make per-user decisions.
+
+### Role-based access
+
+Return `null` (401) for any user you want to block, or segment access by returning different user IDs based on your own logic:
+
+```typescript
+// agent/auth.ts — block non-admins from the agent endpoint
+import { auth } from "@/auth";
+
+export default async function (req: Request) {
+  const session = await auth();
+  if (!session?.user) return null;              // not signed in → 401
+  if (session.user.role !== "admin") return null; // signed in but not admin → 401
+  return session.user.id;                       // admin → allow, scoped to their ID
+}
+```
 
 ---
 
