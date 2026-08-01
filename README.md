@@ -251,7 +251,7 @@ Layer 2 components (`ChatTopBar`, `ChatMessageList`, `ChatInputBar`) and `GluonA
 
 ```json
 {
-  "model": "openai/gpt-4o",
+  "model": "openai/o4-mini",
   "systemPrompt": "./agent/system-prompt.md",
   "maxOutputTokens": 16384,
   "maxRounds": 25,
@@ -322,7 +322,7 @@ Install only the provider packages you need. `@ai-sdk/openai` ships with gluon; 
 Examples:
 
 ```json
-{ "model": "openai/gpt-4o" }
+{ "model": "openai/o4-mini" }
 { "model": "anthropic/claude-sonnet-4.6" }
 { "model": "google/gemini-2.0-flash" }
 { "model": "groq/llama-3.3-70b-versatile" }

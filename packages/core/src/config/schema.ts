@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const AgentConfigSchema = z.object({
-  model: z.string().default("openai/gpt-4o"),
+  model: z.string().default("openai/o4-mini"),
 
   // Prefer a path to agent/system-prompt.md (scaffolded by `gluon-ai init`).
   // Inline strings are also supported for simple setups.

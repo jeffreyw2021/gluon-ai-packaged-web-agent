@@ -157,7 +157,7 @@ function buildDefaults(scan: ScanResult): Answers {
       : ([...scan.detectedEnvVars.keys()].find(
           (k) => k.includes("REDIS") || k.includes("UPSTASH"),
         ) ?? "REDIS_URL"),
-    model: "openai/gpt-4o",
+    model: "openai/o4-mini",
     // Points at the markdown file scaffolded by init — easier to edit than
     // an inline JSON string, and keeps a richer default prompt out of agent.config.json.
     systemPrompt: "./agent/system-prompt.md",
@@ -279,7 +279,7 @@ async function askQuestions(
   );
   console.log("  Press Enter to accept the value shown in [brackets].\n");
 
-  const model = await prompt("Model (provider/model, e.g. openai/gpt-4o)", defaults.model);
+  const model = await prompt("Model (provider/model, e.g. openai/o4-mini)", defaults.model);
   const systemPrompt = await prompt("System prompt", defaults.systemPrompt);
   const apiBasePath = await prompt("API route base path", defaults.apiBasePath);
 

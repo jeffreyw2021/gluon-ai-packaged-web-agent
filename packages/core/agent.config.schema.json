@@ -7,8 +7,8 @@
   "properties": {
     "model": {
       "type": "string",
-      "default": "openai/gpt-4o",
-      "description": "Model to use, as a provider/model string (e.g. \"openai/gpt-4o\", \"anthropic/claude-sonnet-4.6\", \"gateway/openai/gpt-4o\"). Bare model IDs like \"gpt-4o\" are normalized to \"openai/gpt-4o\" automatically."
+      "default": "openai/o4-mini",
+      "description": "Model to use, as a provider/model string (e.g. \"openai/o4-mini\", \"anthropic/claude-sonnet-4.6\", \"gateway/openai/gpt-4o\"). Bare model IDs like \"gpt-4o\" are normalized to \"openai/gpt-4o\" automatically."
     },
     "systemPrompt": {
       "type": "string",
