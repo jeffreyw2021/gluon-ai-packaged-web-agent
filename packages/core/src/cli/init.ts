@@ -102,7 +102,10 @@ const PROVIDERS = [
     label: "OpenAI",
     envKey: "OPENAI_API_KEY",
     configKey: "openaiApiKey",
-    defaultModel: "openai/o4-mini",
+    // o4-mini uses the Responses API and requires reasoning items on multi-turn
+    // calls, which gluon-ai's message history doesn't store. Use gpt-4o-mini
+    // (Chat Completions API) which works correctly across all conversation rounds.
+    defaultModel: "openai/gpt-4o-mini",
     sdkPackage: "@ai-sdk/openai",
     // @ai-sdk/openai@4+ switched to Responses-API spec v4, which is incompatible
     // with the ai@6.x (AI SDK 5) bundled inside gluon-ai. Pin to ^3.
@@ -163,7 +166,7 @@ async function askQuestions(
 
   console.log(`  Detected: package manager ${scan.packageManager}\n`);
 
-  const defaults: Answers = { providerIndex: 0, model: "openai/o4-mini", port: 3001 };
+  const defaults: Answers = { providerIndex: 0, model: "openai/gpt-4o-mini", port: 3001 };
 
   if (useDefaults) {
     console.log("  Using all defaults (--default flag set):\n");
