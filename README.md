@@ -1,4 +1,4 @@
-# gluon-ai
+# Gluon-ai
 
 > **Beta** — personal project, rough edges expected.
 
