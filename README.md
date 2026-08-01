@@ -84,6 +84,7 @@ That's enough for a working agent with web search, multi-chat, streaming, and th
 | Path                                              | Purpose                                      |
 | ------------------------------------------------- | -------------------------------------------- |
 | `agent.config.json`                               | Model, tools, auth, prompts, env remaps      |
+| `agent/package.json`                              | `{ "type": "module" }` — silences Node ESM warnings when loading tools |
 | `agent/system-prompt.md`                          | Default system prompt (edit this freely)     |
 | `agent/tools/webSearch.ts`                        | Example tool (OpenAI web search)             |
 | `agent/context/datetime.ts`                       | Example context provider (current date/time) |
@@ -99,6 +100,7 @@ Also:
 
 ```
 agent/
+  package.json          # { "type": "module" } — required for Node dynamic imports
   system-prompt.md
   tools/
     webSearch.ts

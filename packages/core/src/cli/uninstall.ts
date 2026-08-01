@@ -402,6 +402,8 @@ export async function uninstallCommand(targetDir: string) {
   removeFile(path.join(ctx.agentDirPath, "tools", "webSearch.ts"));
   removeFile(path.join(ctx.agentDirPath, "tools", "helloWorld.ts"));
   removeEmptyDir(path.join(ctx.agentDirPath, "tools"));
+  // ESM marker written by init (avoids MODULE_TYPELESS_PACKAGE_JSON warnings)
+  removeFile(path.join(ctx.agentDirPath, "package.json"));
   // Legacy: older versions generated agent/worker.ts — remove if present
   removeFile(path.join(ctx.agentDirPath, "worker.ts"));
   removeEmptyDir(ctx.agentDirPath);

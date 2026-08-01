@@ -954,6 +954,14 @@ export async function initCommand(
   // 3. Default system prompt (markdown — referenced by agent.config.json)
   write(path.join(root, "agent/system-prompt.md"), systemPromptTemplate());
 
+  // 3b. agent/package.json — marks agent modules as ESM so Node doesn't warn
+  //     MODULE_TYPELESS_PACKAGE_JSON when dynamically importing .ts tools/context.
+  //     Scoped under agent/ so the host Next.js app stays untouched.
+  write(
+    path.join(root, "agent/package.json"),
+    `${JSON.stringify({ name: "gluon-agent", private: true, type: "module" }, null, 2)}\n`,
+  );
+
   // 4. Web search tool (default example — OpenAI web search, uses OPENAI_API_KEY)
   write(path.join(root, "agent/tools/webSearch.ts"), webSearchTool());
 

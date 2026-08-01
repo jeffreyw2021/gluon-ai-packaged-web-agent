@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { pathToFileURL } from "node:url";
 import type { ToolDefinition, ActionBlockRegistry } from "../tool";
 import { AgentConfigSchema, type AgentConfig } from "./schema";
 import type { GluonDatabaseAdapter } from "../server/db/adapter";
@@ -45,7 +46,10 @@ function resolveRelativePath(base: string, relativePath: string): string {
 
 async function dynamicImport(filePath: string): Promise<unknown> {
   const resolved = path.resolve(filePath);
-  const module = await import(resolved);
+  // file:// URL is required for absolute paths under Node ESM; nearest
+  // agent/package.json `"type":"module"` (scaffolded by init) avoids
+  // MODULE_TYPELESS_PACKAGE_JSON warnings for host apps without root "type".
+  const module = await import(pathToFileURL(resolved).href);
   return module.default ?? module;
 }
 
