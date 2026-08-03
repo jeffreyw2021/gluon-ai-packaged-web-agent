@@ -450,82 +450,59 @@ GLUON_CORS_ORIGIN=*
 // ── Proxy auto-patcher ─────────────────────────────────────────────────────
 
 /**
- * Try to patch a Next.js config file to add the gluon proxy rewrite.
- * Returns true if the config was patched or was already configured.
+ * Scaffold a Next.js App Router catch-all route that streams responses from
+ * the Gluon container directly, without buffering (unlike async rewrites()).
+ * Returns true if the route was created or already exists.
  */
-function patchNextConfig(root: string, port: number): boolean {
-  const candidates = ["next.config.ts", "next.config.js", "next.config.mjs"];
-  const configFile = candidates.find((f) => exists(path.join(root, f)));
-  if (!configFile) return false;
+function scaffoldNextProxyRoute(root: string, port: number): boolean {
+  const appRouterDir = exists(path.join(root, "src", "app")) ? "src/app" : "app";
+  const routeDir = path.join(root, appRouterDir, "api", "gluon", "[[...path]]");
+  const routePath = path.join(routeDir, "route.ts");
 
-  const configPath = path.join(root, configFile);
-  let content = read(configPath);
-
-  if (content.includes("/api/gluon")) {
-    log("skip", `${configFile} (gluon proxy already configured)`);
+  if (exists(routePath)) {
+    log("skip", `${appRouterDir}/api/gluon/[[...path]]/route.ts (already exists)`);
     return true;
   }
 
-  const rewrite = `{ source: "/api/gluon/:path*", destination: "http://localhost:${port}/:path*" }`;
-  const rewriteBlock = `  async rewrites() {\n    return [${rewrite}];\n  },\n`;
+  const upstream = `http://localhost:${port}`;
+  // Use a variable name that doesn't shadow the outer `path` import
+  const template = `export const dynamic = "force-dynamic";
 
-  // Pattern A: empty config object `= {}`
-  const emptyObjRe = /(const nextConfig[^=]*=\s*)\{\s*\}/;
-  if (emptyObjRe.test(content)) {
-    content = content.replace(emptyObjRe, `$1{\n${rewriteBlock}}`);
-    fs.writeFileSync(configPath, content, "utf-8");
-    log("write", configPath);
-    return true;
-  }
+const UPSTREAM = process.env.GLUON_UPSTREAM_URL ?? "${upstream}";
 
-  // Pattern B: config has options but no rewrites — inject before the closing `};`
-  if (!content.includes("rewrites")) {
-    const closingRe = /\n\};\s*\n(export default nextConfig)/;
-    if (closingRe.test(content)) {
-      content = content.replace(closingRe, `\n${rewriteBlock}};\n$1`);
-      fs.writeFileSync(configPath, content, "utf-8");
-      log("write", configPath);
-      return true;
-    }
-  }
-
-  // Pattern C: already has rewrites() — inject our entry into the return array
-  const returnArrayRe = /(async\s+rewrites\s*\(\s*\)\s*\{[\s\S]*?return\s*\[)([\s\S]*?)(\])/;
-  if (returnArrayRe.test(content)) {
-    content = content.replace(
-      returnArrayRe,
-      (_, pre, items, close) => {
-        const sep = items.trim().length > 0 ? ",\n        " : "\n        ";
-        return `${pre}${items.trimEnd()}${sep}${rewrite},\n      ${close}`;
-      },
-    );
-    fs.writeFileSync(configPath, content, "utf-8");
-    log("write", configPath);
-    return true;
-  }
-
-  return false;
+async function proxy(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+  const pathname = url.pathname.replace(/^\\/api\\/gluon/, "");
+  const upstream = await fetch(\`\${UPSTREAM}\${pathname}\${url.search}\`, {
+    method: req.method,
+    headers: req.headers,
+    body: req.method !== "GET" && req.method !== "HEAD" ? req.body : undefined,
+    // @ts-expect-error — duplex required for streaming request bodies in Node.js
+    duplex: "half",
+    signal: req.signal,
+  });
+  // Pipe upstream.body as a ReadableStream — never buffers, so SSE deltas
+  // flow to the browser in real time instead of appearing all at once.
+  return new Response(upstream.body, {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers: upstream.headers,
+  });
 }
 
-/**
- * Try to patch a Vite config file to add the gluon dev-server proxy.
- * Returns true if the config was patched or was already configured.
- */
-function patchViteConfig(root: string, port: number): boolean {
-  const candidates = ["vite.config.ts", "vite.config.js", "vite.config.mjs"];
-  const configFile = candidates.find((f) => exists(path.join(root, f)));
-  if (!configFile) return false;
+export {
+  proxy as GET,
+  proxy as POST,
+  proxy as DELETE,
+  proxy as PUT,
+  proxy as PATCH,
+};
+`;
 
-  const configPath = path.join(root, configFile);
-  const content = read(configPath);
-
-  if (content.includes("/api/gluon")) {
-    log("skip", `${configFile} (gluon proxy already configured)`);
-    return true;
-  }
-
-  // Vite configs are too varied — just print the snippet
-  return false;
+  fs.mkdirSync(routeDir, { recursive: true });
+  fs.writeFileSync(routePath, template, "utf-8");
+  log("write", `${appRouterDir}/api/gluon/[[...path]]/route.ts`);
+  return true;
 }
 
 /**
@@ -543,9 +520,7 @@ function applyProxyConfig(
   let patched = false;
 
   if (framework === "nextjs") {
-    patched = patchNextConfig(root, port);
-  } else if (framework === "vite" || framework === "sveltekit") {
-    patched = patchViteConfig(root, port);
+    patched = scaffoldNextProxyRoute(root, port);
   }
 
   if (patched) {
@@ -560,12 +535,8 @@ function applyProxyConfig(
   );
 
   if (framework === "nextjs") {
-    console.log("  In next.config.ts → rewrites:");
-    console.log(`
-    async rewrites() {
-      return [{ source: '/api/gluon/:path*', destination: 'http://localhost:${port}/:path*' }]
-    }
-`);
+    console.log("  Create src/app/api/gluon/[[...path]]/route.ts with a streaming proxy.");
+    console.log("  See: https://github.com/gluon-ai/gluon-ai#nextjs-proxy\n");
   } else if (framework === "vite") {
     console.log("  In vite.config.ts → server.proxy:");
     console.log(`

@@ -97,11 +97,15 @@ function detectContext(root: string): UninstallContext {
   const appRouterDir = exists(path.join(root, "src", "app"))
     ? "src/app"
     : "app";
-  // Resolve the API route directory — check the new default first, then fall
-  // back to the legacy "agent" name so old installs still uninstall cleanly.
+  // Resolve the API route directory — check new path first, then legacy names
+  const gluonDir = path.join(root, appRouterDir, "api", "gluon");
   const gluonAiDir = path.join(root, appRouterDir, "api", "gluon-ai");
   const legacyAgentDir = path.join(root, appRouterDir, "api", "agent");
-  const apiAgentDir = exists(gluonAiDir) ? gluonAiDir : legacyAgentDir;
+  const apiAgentDir = exists(gluonDir)
+    ? gluonDir
+    : exists(gluonAiDir)
+      ? gluonAiDir
+      : legacyAgentDir;
 
   // instrumentation.ts location
   let instrPath: string | null = null;
@@ -237,24 +241,41 @@ function stripNextConfig(ctx: UninstallContext) {
     return;
   }
   let content = read(configPath);
-  if (!content.includes("gluon-ai")) {
-    log("skip", `${configPath} (gluon-ai not referenced)`);
+  let changed = false;
+
+  // Strip serverExternalPackages entry (added by old in-process init versions)
+  if (content.includes("gluon-ai")) {
+    content = content.replace(
+      /\n\s*\/\/ Lets Turbopack resolve subpath exports via Node instead of bundling\.\n\s*serverExternalPackages: \["gluon-ai"\],/g,
+      "",
+    );
+    content = content.replace(/,\s*"gluon-ai"/g, "");
+    content = content.replace(/"gluon-ai",\s*/g, "");
+    content = content.replace(/\n\s*serverExternalPackages:\s*\[\s*\],?/g, "");
+    changed = true;
+  }
+
+  // Strip async rewrites() referencing /api/gluon (added by old containerized
+  // init versions — new init uses a Route Handler instead)
+  if (content.includes("/api/gluon")) {
+    const before = content;
+    content = content.replace(
+      /,?\s*\n\s*async rewrites\(\) \{\n\s+return \[.*?\/api\/gluon.*?\];\s*\n\s+\},?/s,
+      "",
+    );
+    if (content !== before) changed = true;
+  }
+
+  if (!changed) {
+    log("skip", `${configPath} (no gluon config found)`);
     return;
   }
 
-  // Remove the comment + full serverExternalPackages line if we own the only entry
-  content = content.replace(
-    /\n\s*\/\/ Lets Turbopack resolve subpath exports via Node instead of bundling\.\n\s*serverExternalPackages: \["gluon-ai"\],/g,
-    "",
-  );
-  // Remove just our entry from a multi-item array
-  content = content.replace(/,\s*"gluon-ai"/g, "");
-  content = content.replace(/"gluon-ai",\s*/g, "");
-  // Remove now-empty serverExternalPackages array
-  content = content.replace(/\n\s*serverExternalPackages:\s*\[\s*\],?/g, "");
+  // Normalize nextConfig object — collapse any resulting `= {\n}` → `= {}`
+  content = content.replace(/(const nextConfig[^=]*=\s*\{)\s*\n(\s*\})/g, "$1$2");
 
   fs.writeFileSync(configPath, content, "utf-8");
-  log("strip", `${configPath} (removed serverExternalPackages entry)`);
+  log("strip", `${configPath} (removed gluon config entries)`);
 }
 
 // ── package.json — remove gluon:uninstall script ──────────────────────────
@@ -360,12 +381,10 @@ export async function uninstallCommand(targetDir: string) {
   );
 
   console.log("  This will:\n");
-  console.log("    • Delete  agent.config.json");
-  console.log("    • Delete  agent/  directory (auth handler, tools)");
-  console.log(`    • Delete  ${ctx.appRouterDir}/api/gluon-ai/  (catch-all route)`);
+  console.log("    • Delete  gluon/  directory (docker, agent config, tools)");
+  console.log(`    • Delete  ${ctx.appRouterDir}/api/gluon/  (streaming proxy route)`);
   console.log("    • Strip   agent env vars from .env.example");
-  console.log("    • Strip   agent register export from instrumentation.ts");
-  console.log("    • Strip   serverExternalPackages entry from next.config");
+  console.log("    • Strip   gluon config entries from next.config");
   console.log("    • Strip   scripts.gluon:uninstall from package.json");
   console.log("    • Uninstall gluon-ai npm package");
   console.log("    • Clear   .next build cache\n");
@@ -392,23 +411,27 @@ export async function uninstallCommand(targetDir: string) {
     "─────────────────────────────────────────────────────────────\n",
   );
 
-  // 1. agent.config.json
-  removeFile(ctx.agentConfigPath);
+  // 1. gluon/ docker folder (agent config, Dockerfile, docker-compose, tools)
+  const gluonDockerDir = path.join(root, "gluon");
+  if (exists(gluonDockerDir)) {
+    fs.rmSync(gluonDockerDir, { recursive: true, force: true });
+    log("remove", "gluon/ (docker folder)");
+  } else {
+    log("skip", "gluon/ (not found)");
+  }
 
-  // 2. agent/ scaffolded files, then try empty dirs
+  // 2. Legacy root-level agent files (pre-containerization installs)
+  removeFile(ctx.agentConfigPath);
   removeFile(path.join(ctx.agentDirPath, "auth", "getUserId.ts"));
   removeEmptyDir(path.join(ctx.agentDirPath, "auth"));
-  // Remove both current (webSearch) and legacy (helloWorld) default tool files
   removeFile(path.join(ctx.agentDirPath, "tools", "webSearch.ts"));
   removeFile(path.join(ctx.agentDirPath, "tools", "helloWorld.ts"));
   removeEmptyDir(path.join(ctx.agentDirPath, "tools"));
-  // ESM marker written by init (avoids MODULE_TYPELESS_PACKAGE_JSON warnings)
   removeFile(path.join(ctx.agentDirPath, "package.json"));
-  // Legacy: older versions generated agent/worker.ts — remove if present
   removeFile(path.join(ctx.agentDirPath, "worker.ts"));
   removeEmptyDir(ctx.agentDirPath);
 
-  // 3. API route files — handle both current (catch-all) and legacy (4 files) layouts
+  // 3. API route files — handle both new (api/gluon/) and legacy layouts
   const catchAllRoute = path.join(ctx.apiAgentDir, "[[...path]]", "route.ts");
   if (exists(catchAllRoute)) {
     removeFile(catchAllRoute);
@@ -431,10 +454,10 @@ export async function uninstallCommand(targetDir: string) {
   // 4. .env.example
   stripEnvExample(ctx);
 
-  // 5. instrumentation.ts
+  // 5. instrumentation.ts (legacy in-process installs only)
   stripOrRemoveInstrumentation(ctx);
 
-  // 6. next.config
+  // 6. next.config — strip rewrites or serverExternalPackages
   stripNextConfig(ctx);
 
   // 7. package.json — remove gluon:uninstall convenience script

@@ -42,6 +42,15 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
   const [reasoningMode, setReasoningMode] = useState<ReasoningMode>("auto");
   const runStateRef = useRef<LiveRunState>(INITIAL_LIVE_RUN_STATE);
   runStateRef.current = runState;
+  // Tracks when activeChatId was changed by sendUserMessage itself so the
+  // chat-change reset effect does not wipe outboundPending that was just set.
+  const pendingNewChatRef = useRef(false);
+  // Tracks the assistant-message count at the time outboundPending was set.
+  // When a new assistant message appears while pending, the run has completed
+  // even if run.completed was missed by SSE.
+  const prevAssistantCountRef = useRef(0);
+  // Timer handle for a fallback thread-refetch when SSE misses run.completed.
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const chatListKey = ["agent-chats"] as const;
   const threadKey = activeChatId ? ["agent-thread", activeChatId] : null;
@@ -73,6 +82,12 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
   });
 
   const messages = hydrated?.messages ?? EMPTY_MESSAGES;
+
+  // Count assistant messages to detect run completion when SSE misses run.completed.
+  const assistantCount = useMemo(
+    () => messages.filter((m) => m.role === "assistant").length,
+    [messages],
+  );
 
   // --- SSE ---
   useEffect(() => {
@@ -108,14 +123,46 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
           console.debug("[gluon:sse]", ev.type, "runId" in ev ? (ev as { runId: string }).runId?.slice(-6) : "");
         }
 
+        // Fix C: reconstruct partial assistant message from in-flight snapshot on first connect
+        if (ev.type === "streaming.snapshot") {
+          const { snapshot, runId } = ev;
+          const parts: Array<{ type: string; [k: string]: unknown }> = [];
+          if (snapshot.reasoningText) parts.push({ type: "reasoning", reasoning: snapshot.reasoningText });
+          if (snapshot.text) parts.push({ type: "text", text: snapshot.text });
+          if (parts.length === 0) return;
+          queryClient.setQueryData<{ messages: UIMessage[]; runId: string | null }>(
+            threadKey ?? ["__agent_no_chat__"],
+            (old) => {
+              const base = old ?? { messages: EMPTY_MESSAGES, runId: null };
+              const existing = base.messages.find((m) => m.id === snapshot.messageId);
+              const snapshotMsg = {
+                id: snapshot.messageId,
+                role: "assistant" as const,
+                parts: parts as UIMessage["parts"],
+              } as UIMessage;
+              const messages = existing
+                ? base.messages.map((m) => (m.id === snapshot.messageId ? snapshotMsg : m))
+                : [...base.messages, snapshotMsg];
+              return { messages, runId };
+            },
+          );
+          setRunState((prev) => ({
+            ...prev,
+            phase: "running",
+            runId,
+            activity: prev.activity ?? "streaming",
+          }));
+          return;
+        }
+
         queryClient.setQueryData<{ messages: UIMessage[]; runId: string | null }>(
           threadKey ?? ["__agent_no_chat__"],
           (old) => {
-            if (!old) return old;
-            const current = old.messages;
-            const result = applyLiveEvent(current, runStateRef.current, ev as Parameters<typeof applyLiveEvent>[2]);
+            // Fix B: initialize from empty state instead of silently dropping the event
+            const base = old ?? { messages: EMPTY_MESSAGES, runId: null };
+            const result = applyLiveEvent(base.messages, runStateRef.current, ev as Parameters<typeof applyLiveEvent>[2]);
             setRunState(result.runState);
-            return { ...old, messages: result.messages };
+            return { ...base, messages: result.messages };
           },
         );
 
@@ -124,6 +171,11 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
           ev.type === "run.failed" ||
           ev.type === "run.cancelled"
         ) {
+          // Cancel the fallback timer — SSE delivered the terminal event normally.
+          if (fallbackTimerRef.current !== null) {
+            clearTimeout(fallbackTimerRef.current);
+            fallbackTimerRef.current = null;
+          }
           setOutboundPending(false);
           setLocallyAborted(false);
           // refetch thread after terminal event
@@ -136,10 +188,30 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
 
   // Reset run state when chat changes
   useEffect(() => {
+    if (pendingNewChatRef.current) {
+      // activeChatId was just set by sendUserMessage — don't wipe outboundPending
+      pendingNewChatRef.current = false;
+      return;
+    }
     setRunState(INITIAL_LIVE_RUN_STATE);
     setOutboundPending(false);
     setLocallyAborted(false);
+    prevAssistantCountRef.current = 0;
   }, [activeChatId]);
+
+  // Fallback completion detector: when a new assistant message appears in the
+  // cache while we are still pending (i.e. SSE missed run.completed), treat it
+  // as a terminal event and clear the pending state.
+  useEffect(() => {
+    if (!outboundPending) {
+      prevAssistantCountRef.current = assistantCount;
+      return;
+    }
+    if (assistantCount > prevAssistantCountRef.current) {
+      prevAssistantCountRef.current = assistantCount;
+      setOutboundPending(false);
+    }
+  }, [assistantCount, outboundPending]);
 
   const sendUserMessage = useCallback(
     async (text: string, sendOpts?: SendOpts): Promise<void> => {
@@ -162,6 +234,7 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
       // flash where the user message is visible but ThoughtWindow is not.
       setOutboundPending(true);
       if (chatId !== activeChatId) {
+        pendingNewChatRef.current = true;
         setActiveChatId(chatId);
         // optimistic insert chat row
         queryClient.setQueryData<AgentChat[]>(chatListKey, (old) => {
@@ -200,7 +273,16 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
             ...(sendReasoning !== undefined ? { sendReasoning } : {}),
           }),
         });
-        if (!res.ok) {
+        if (res.ok) {
+          // Schedule a fallback thread-refetch in case SSE misses run.completed
+          // (e.g. the run completes before the user-scope SSE subscription is open).
+          if (fallbackTimerRef.current !== null) clearTimeout(fallbackTimerRef.current);
+          const capturedChatId = chatId;
+          fallbackTimerRef.current = setTimeout(() => {
+            fallbackTimerRef.current = null;
+            void queryClient.invalidateQueries({ queryKey: ["agent-thread", capturedChatId] });
+          }, 3_000);
+        } else {
           console.error("[useAgentAdapter] send failed", res.status);
           setOutboundPending(false);
         }

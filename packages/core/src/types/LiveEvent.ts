@@ -116,7 +116,14 @@ export type UserChatListEvent =
   | ChatUpdatedEvent
   | ChatDeletedEvent;
 
-export type ChatTransportEvent = LiveEvent | UserChatListEvent;
+export interface StreamingSnapshotTransportEvent {
+  type: "streaming.snapshot";
+  chatId: string;
+  runId: string;
+  snapshot: StreamingSnapshotDto;
+}
+
+export type ChatTransportEvent = LiveEvent | UserChatListEvent | StreamingSnapshotTransportEvent;
 
 export interface StreamingSnapshotDto {
   messageId: string;

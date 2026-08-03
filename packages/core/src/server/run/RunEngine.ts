@@ -148,7 +148,9 @@ async function finalizeRun(args: {
 
   try {
     await threadService.clearRunStreamingState(args.chatJobRunId);
-    await clearRunEventBuffer(args.chatJobRunId);
+    // NOTE: clearRunEventBuffer is intentionally NOT called here.
+    // The buffer is cleared after the terminal event is published below,
+    // so cursor-based replay can deliver run.completed to late-connecting clients.
   } catch (err) {
     console.error("[RunEngine] clear streaming state failed", err);
   }
@@ -220,6 +222,15 @@ async function finalizeRun(args: {
     }
   } catch (err) {
     console.error("[RunEngine] terminal publish failed", err);
+  }
+
+  // Clear the event buffer only AFTER publishing the terminal event.
+  // This keeps run.completed/failed/cancelled in the buffer long enough for
+  // cursor-based replay to deliver it to clients that reconnect after the run ends.
+  try {
+    await clearRunEventBuffer(args.chatJobRunId);
+  } catch (err) {
+    console.error("[RunEngine] clear event buffer failed", err);
   }
 
   try {
