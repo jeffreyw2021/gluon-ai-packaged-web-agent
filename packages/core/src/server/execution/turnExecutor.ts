@@ -19,6 +19,7 @@ import {
   detectApprovalFromChunk,
 } from "./approvalDetector";
 import { createCancelPollState, pollRunCancelled } from "./cancelPoll";
+import { compressContext, CTX_SNAPSHOT_ID } from "./contextWindow";
 import { lastAssistantMessageForStreamSeed } from "./streamSeed";
 import { extractReasoningDeltaFromChunk, extractTextDeltaFromChunk } from "./streamTextDelta";
 
@@ -79,7 +80,19 @@ export async function executeTurn(
     }
   }
 
-  const agentMessages = prepareUiMessagesForAgent(previousMessages);
+  // Compress context when the conversation exceeds the configured token budget.
+  // The full history stays in the DB; only the slice sent to the model shrinks.
+  const { agentMessages: compressedMessages, wasCompressed, splitIndex } =
+    await compressContext(previousMessages, input.loadedConfig.raw);
+
+  // Inject the snapshot marker once into the persisted thread so the UI shows
+  // a visible boundary where earlier messages were condensed.
+  if (wasCompressed && !previousMessages.some((m) => m.id === CTX_SNAPSHOT_ID)) {
+    const snapshotMsg = compressedMessages[0];
+    void threadService.injectSystemMarker(input.chatId, snapshotMsg, splitIndex);
+  }
+
+  const agentMessages = prepareUiMessagesForAgent(compressedMessages);
   const agent = await createAgent(input.loadedConfig);
 
   let finishReason = "stop";

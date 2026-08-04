@@ -38,6 +38,7 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
   const [runState, setRunState] = useState<LiveRunState>(INITIAL_LIVE_RUN_STATE);
   const [outboundPending, setOutboundPending] = useState(false);
   const [locallyAborted, setLocallyAborted] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
   const [inputText, setInputText] = useState("");
   const [reasoningMode, setReasoningMode] = useState<ReasoningMode>("auto");
   const runStateRef = useRef<LiveRunState>(INITIAL_LIVE_RUN_STATE);
@@ -331,6 +332,27 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
     }
   }, [activeChatId, basePath]);
 
+  const summarizeContext = useCallback(async (): Promise<void> => {
+    if (!activeChatId) return;
+    setIsSummarizing(true);
+    try {
+      await fetch(`${basePath}/commands`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "summarize", chatId: activeChatId }),
+      });
+      // refetchQueries actively triggers a refetch and waits for the data to
+      // land in the cache before resolving — ensuring the snapshot marker is
+      // visible the moment isSummarizing goes false (no flash between the
+      // optimistic "Summarizing…" disappearing and the real marker appearing).
+      await queryClient.refetchQueries({ queryKey: ["agent-thread", activeChatId] });
+    } catch (err) {
+      console.error("[useAgentAdapter] summarize error", err);
+    } finally {
+      setIsSummarizing(false);
+    }
+  }, [activeChatId, basePath, queryClient]);
+
   const submitToolApproval = useCallback(
     async (opts2: { approvalId: string; approved: boolean; reason?: string }): Promise<void> => {
       if (!activeChatId || !runState.runId) return;
@@ -418,10 +440,12 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
     isGenerating,
     isStreaming,
     isSubmitting,
+    isSummarizing,
     reasoningMode,
     setReasoningMode,
     sendUserMessage,
     stopGeneration,
+    summarizeContext,
     submitToolApproval,
     submitClientToolOutput,
     chats,

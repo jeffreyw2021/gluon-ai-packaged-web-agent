@@ -1,19 +1,24 @@
 "use client";
 
 import React, {
+  useCallback,
   useEffect,
   useRef,
+  useState,
   type CSSProperties,
+  type KeyboardEvent,
   type ReactNode,
 } from "react";
 import { useAgentContext } from "../provider/AgentProvider";
 import { useAttachments } from "../hooks/useAttachments";
 import { useSpeechTranscriber } from "../hooks/useSpeechTranscriber";
 import { useComposerActions } from "../hooks/useComposerActions";
+import { useSlashCommands } from "../hooks/useSlashCommands";
 import { HeadlessChatInput } from "../input/ChatInput";
 import { LiveTranscript } from "../display/LiveTranscript";
 import { HeadlessAttachButton } from "../buttons/AttachButton";
 import { AttachmentChip } from "../display/AttachmentChip";
+import { SlashCommandMenu } from "../styled/SlashCommandMenu";
 import type { Attachment } from "../hooks/useAttachments";
 import type { ChatInputProps as HeadlessChatInputProps, ChatInputHandle } from "../input/ChatInput";
 import { X, Paperclip, ArrowRight, Square, Mic } from "lucide-react";
@@ -294,7 +299,7 @@ export function ChatInputBar({
   darkMode = false,
 }: ChatInputBarProps) {
   const { adapter } = useAgentContext();
-  const { composer, runPhase, stopGeneration } = adapter;
+  const { composer, runPhase, stopGeneration, isSummarizing } = adapter;
 
   const attachmentsHook = useAttachments();
   const { attachments, addFiles, removeFile } = attachmentsHook;
@@ -308,6 +313,67 @@ export function ChatInputBar({
     attachments: attachmentsHook,
     transcriber,
   });
+
+  // ── Slash command menu ──────────────────────────────────────────────────
+  const { filter: filterCommands, execute: executeCommand } = useSlashCommands();
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+
+  const inputText = composer.inputText;
+  const isSlashInput = inputText.startsWith("/") && !isSummarizing;
+  const slashQuery = isSlashInput ? inputText.slice(1) : "";
+  const filteredCommands = isSlashInput ? filterCommands(slashQuery) : [];
+  const menuOpen = isSlashInput && filteredCommands.length > 0;
+
+  // Reset highlighted index whenever the filtered list changes.
+  const prevMenuLenRef = useRef(0);
+  useEffect(() => {
+    if (filteredCommands.length !== prevMenuLenRef.current) {
+      setHighlightedIndex(0);
+      prevMenuLenRef.current = filteredCommands.length;
+    }
+  }, [filteredCommands.length]);
+
+  const highlightedIndexRef = useRef(highlightedIndex);
+  highlightedIndexRef.current = highlightedIndex;
+
+  const handleSelectCommand = useCallback(
+    (cmd: typeof filteredCommands[number]) => {
+      composer.setInputText("");
+      void executeCommand(cmd);
+    },
+    [composer, executeCommand],
+  );
+
+  // Intercept arrow/enter/escape in capture phase so the textarea's own
+  // keydown handlers don't fire while the menu is open.
+  const handleKeyDownCapture = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>) => {
+      if (!menuOpen) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        e.stopPropagation();
+        setHighlightedIndex((i) => (i + 1) % filteredCommands.length);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        e.stopPropagation();
+        setHighlightedIndex(
+          (i) => (i - 1 + filteredCommands.length) % filteredCommands.length,
+        );
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        const cmd = filteredCommands[highlightedIndexRef.current];
+        if (cmd) handleSelectCommand(cmd);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        composer.setInputText("");
+      }
+    },
+    [menuOpen, filteredCommands, handleSelectCommand, composer],
+  );
+
+  // ── Layout ───────────────────────────────────────────────────────────────
 
   const attachEnabled = !attach?.disabled;
   const voiceEnabled = !voice?.disabled;
@@ -350,7 +416,25 @@ export function ChatInputBar({
         {...(darkMode ? { "data-dark": "" } : {})}
         className={`gluon-inputbar${className ? ` ${className}` : ""}`}
         style={rootStyle}
+        onKeyDownCapture={handleKeyDownCapture}
       >
+        {/* Relative container so the slash menu can be absolutely positioned above the input box */}
+        <div style={{ position: "relative" }}>
+          {menuOpen && (
+            <SlashCommandMenu
+              commands={filteredCommands}
+              highlightedIndex={highlightedIndex}
+              onSelect={handleSelectCommand}
+              darkMode={darkMode}
+              style={{
+                position: "absolute",
+                bottom: "calc(100% + 6px)",
+                left: 0,
+                right: 0,
+                zIndex: 50,
+              }}
+            />
+          )}
         <div className="gluon-ib-input-box" style={inputBoxStyle}>
           {/* Attachment chips */}
           {attachEnabled && !isListening && safeAttachments.length > 0 && (
@@ -488,7 +572,8 @@ export function ChatInputBar({
             onSend={handleSend}
             onStop={() => void stopGeneration()}
             runPhase={chatInputRunPhase}
-            placeholder={placeholder}
+            placeholder={isSummarizing ? "Summarizing…" : placeholder}
+            disabled={isSummarizing}
             hasAttachments={safeAttachments.length > 0}
               styles={{
               root: { display: "flex", flexDirection: "column" },
@@ -570,12 +655,12 @@ export function ChatInputBar({
                   ) : (
                     <button
                       type="submit"
-                      disabled={(!isActive && !canSend) || isListening}
+                      disabled={(!isActive && !canSend) || isListening || isSummarizing}
                       aria-label={isActive ? "Stop generation" : "Send message"}
                       className={`gluon-ib-send-btn ${
                         isActive
                           ? "gluon-ib-send-btn-active"
-                          : canSend && !isListening
+                          : canSend && !isListening && !isSummarizing
                             ? "gluon-ib-send-btn-ready"
                             : "gluon-ib-send-btn-idle"
                       }`}
@@ -592,6 +677,7 @@ export function ChatInputBar({
             )}
           />
         </div>
+        </div>{/* end relative wrapper */}
 
         {disclaimer && (
           <p

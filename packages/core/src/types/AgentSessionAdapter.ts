@@ -40,6 +40,8 @@ export interface AgentSessionAdapter {
   isStreaming: boolean;
   isGenerating: boolean;
   isSubmitting: boolean;
+  /** True while an on-demand context summarization is in flight. */
+  isSummarizing: boolean;
 
   /** Token counts for the most recently completed run. Null before any run completes or while a run is in progress. */
   lastRunUsage: TokenUsage | null;
@@ -50,6 +52,8 @@ export interface AgentSessionAdapter {
 
   sendUserMessage(text: string, opts?: SendOpts): Promise<void>;
   stopGeneration(): Promise<void>;
+  /** Trigger on-demand context window summarization for the active chat. */
+  summarizeContext(): Promise<void>;
   submitToolApproval(opts: {
     approvalId: string;
     approved: boolean;

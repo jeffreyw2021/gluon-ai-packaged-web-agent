@@ -8,12 +8,14 @@ import type { ActionBlockRegistry } from "../../tool";
 import { ThoughtWindow } from "./thoughts/ThoughtWindow";
 import { UserMessage } from "./UserMessage";
 import { AssistantMessage } from "./AssistantMessage";
+import { SystemMessage } from "./SystemMessage";
 import { isLiveRunPhase } from "../../types/RunPhase";
 import type { ThoughtWindowProps } from "./thoughts/ThoughtWindow";
 import type { ConfirmationBlockProps } from "./ConfirmationBlock";
 import type { ActionBlockSlotProps } from "./ActionBlockSlot";
 import type { UserMessageProps } from "./UserMessage";
 import type { AssistantMessageProps } from "./AssistantMessage";
+import type { SystemMessageProps } from "./SystemMessage";
 
 export interface MessageListComponentSlots {
   /** Override the user message component. */
@@ -26,6 +28,11 @@ export interface MessageListComponentSlots {
   ConfirmationPrompt?: ComponentType<ConfirmationBlockProps>;
   /** Override the action block slot. */
   ActionBlockSlot?: ComponentType<ActionBlockSlotProps>;
+  /**
+   * Override the system message component used for runtime-injected status
+   * labels (e.g. the context-compression snapshot marker).
+   */
+  SystemMessage?: ComponentType<SystemMessageProps>;
   /**
    * Override the empty-state panel shown when there are no messages.
    * Receives suggested prompts and a select handler.
@@ -194,6 +201,7 @@ export function MessageList({
   const UserMessageComp = components.UserMessage ?? UserMessage;
   const AssistantMessageComp = components.AssistantMessage ?? AssistantMessage;
   const ThoughtWindowComp = components.ThoughtWindow ?? ThoughtWindow;
+  const SystemMessageComp = components.SystemMessage ?? SystemMessage;
   const EmptyComp = components.Empty ?? DefaultEmpty;
 
   // Build slots for AssistantMessage
@@ -214,13 +222,23 @@ export function MessageList({
 
       {messages.map((msg, i) => {
         const isLast = i === messages.length - 1;
-        const nextRole = messages[i + 1]?.role;
+        // Skip system messages when looking for the next rendered role so that
+        // a system marker between two turns doesn't collapse the spacing.
+        const nextRole = messages
+          .slice(i + 1)
+          .find((m) => m.role !== "system")?.role;
         const mb =
           spacing !== false
             ? resolveMarginBottom(msg.role, nextRole, spacing)
             : undefined;
         const msgStyle: CSSProperties | undefined =
           mb !== undefined ? { marginBottom: mb } : undefined;
+
+        if (msg.role === "system") {
+          // System messages (e.g. context-compression markers) handle their own
+          // spacing via CSS; skip the regular marginBottom logic entirely.
+          return <SystemMessageComp key={msg.id} message={msg} />;
+        }
 
         if (msg.role === "user") {
           return (

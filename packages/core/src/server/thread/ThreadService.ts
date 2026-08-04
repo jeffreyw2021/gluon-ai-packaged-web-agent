@@ -222,6 +222,49 @@ export class ThreadService {
   mergeSnapshot(messages: UIMessage[], snapshot: UIMessage): UIMessage[] {
     return mergeMessageSnapshot(messages, snapshot);
   }
+
+  /**
+   * Inserts a system marker (e.g. the context compression snapshot) into the
+   * persisted thread at `insertAt` — the index of the first message that was
+   * kept in the recent tail. Call-sites should guard against double-injection
+   * by checking whether a marker with the same id already exists.
+   */
+  async injectSystemMarker(
+    chatId: string,
+    marker: UIMessage,
+    insertAt: number,
+  ): Promise<void> {
+    const prev = await loadChat(chatId);
+    const clampedAt = Math.max(0, Math.min(insertAt, prev.length));
+    const next = [
+      ...prev.slice(0, clampedAt),
+      marker,
+      ...prev.slice(clampedAt),
+    ];
+    await saveChat({ chatId, messages: next });
+  }
+
+  /**
+   * Atomically replaces any existing context snapshot with a fresh one.
+   * Removes the old marker first, then inserts the new one at `insertAt`
+   * (index into the snapshot-free history). Safe to call even when no
+   * prior snapshot exists.
+   */
+  async replaceContextSnapshot(
+    chatId: string,
+    marker: UIMessage,
+    insertAt: number,
+  ): Promise<void> {
+    const prev = await loadChat(chatId);
+    const withoutSnapshot = prev.filter((m) => m.id !== marker.id);
+    const clampedAt = Math.max(0, Math.min(insertAt, withoutSnapshot.length));
+    const next = [
+      ...withoutSnapshot.slice(0, clampedAt),
+      marker,
+      ...withoutSnapshot.slice(clampedAt),
+    ];
+    await saveChat({ chatId, messages: next });
+  }
 }
 
 function isLivePhase(phase: RunPhase): boolean {

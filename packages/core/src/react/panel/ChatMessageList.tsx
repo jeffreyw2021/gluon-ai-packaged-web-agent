@@ -15,11 +15,13 @@ import { useAgentContext } from "../provider/AgentProvider";
 import { MessageList } from "../messages/MessageList";
 import { UserMessage } from "../messages/UserMessage";
 import { AssistantMessage } from "../messages/AssistantMessage";
+import { SystemMessage } from "../messages/SystemMessage";
 import { EmptyView } from "../styled/EmptyView";
 import type { MessageListProps } from "../messages/MessageList";
 import type { UserMessageProps } from "../messages/UserMessage";
 import type { AssistantMessageProps } from "../messages/AssistantMessage";
 import type { ThoughtWindowProps } from "../messages/thoughts/ThoughtWindow";
+import type { SystemMessageProps } from "../messages/SystemMessage";
 import {
   FileText,
   Globe,
@@ -89,6 +91,33 @@ const MESSAGE_LIST_CSS = `
     transition: color 0.15s ease;
   }
   .gluon-ml-thought-header:hover { color: var(--gluon-ml-fg-secondary); }
+
+  /* ── System message (context markers, status labels) ──────────────── */
+  .gluon-ml-system-msg {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0;
+    width: 100%;
+  }
+  .gluon-ml-system-msg::before,
+  .gluon-ml-system-msg::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--gluon-ml-fg-subtle);
+    opacity: 0.18;
+  }
+  .gluon-ml-system-msg [data-slot="system-message-text"] {
+    font-size: 12px;
+    font-weight: 500;
+    font-style: italic;
+    color: var(--gluon-ml-fg-subtle);
+    white-space: nowrap;
+    flex-shrink: 0;
+    line-height: 1;
+    letter-spacing: 0.01em;
+  }
 
   .gluon-ml-prompt-btn {
     width: 100%;
@@ -342,6 +371,38 @@ function ThinkingLabel({ verb }: { verb: string }) {
         }}
       />
     </span>
+  );
+}
+
+// ── System message (inline status divider) ─────────────────────────────────
+
+function StyledSystemMessage({ message }: SystemMessageProps) {
+  const raw =
+    message.parts?.find(
+      (p): p is { type: "text"; text: string } => p.type === "text",
+    )?.text ?? "";
+  // Extract a concise label from the bracketed first line (e.g.
+  // "[Context snapshot — earlier messages condensed]" → the bracket content).
+  // Falls back to the full text for custom system messages.
+  const firstLine = raw.split("\n")[0].trim();
+  const label =
+    firstLine.startsWith("[") && firstLine.endsWith("]")
+      ? firstLine.slice(1, -1)
+      : firstLine || raw;
+
+  // Pass a shortened message so the headless component's inner text span
+  // only holds the label. CSS targets [data-slot="system-message-text"]
+  // inside .gluon-ml-system-msg for typography.
+  const displayMessage = {
+    ...message,
+    parts: [{ type: "text" as const, text: label }],
+  };
+
+  return (
+    <SystemMessage
+      message={displayMessage}
+      className="gluon-ml-system-msg"
+    />
   );
 }
 
@@ -825,11 +886,31 @@ export function ChatMessageList({
     runPhase,
     runActivity,
     isChatLoading,
+    isSummarizing,
     awaitingApprovalId,
     submitToolApproval,
   } = adapter;
 
-  const _isEmpty = messages.length === 0 && !isChatLoading;
+  // While summarization is in flight append an optimistic status message so
+  // the user sees "Summarizing…" in the message list immediately, which then
+  // transitions to the real snapshot marker once the thread reloads.
+  const SUMMARIZING_MSG = useMemo(
+    () => ({
+      id: "gluon-summarizing-optimistic",
+      role: "system" as const,
+      parts: [{ type: "text" as const, text: "Summarizing…" }],
+    }),
+    [],
+  );
+  const displayMessages = useMemo(
+    () =>
+      isSummarizing
+        ? [...messages, SUMMARIZING_MSG as (typeof messages)[number]]
+        : messages,
+    [isSummarizing, messages, SUMMARIZING_MSG],
+  );
+
+  const _isEmpty = displayMessages.length === 0 && !isChatLoading;
 
   const rootStyle: CSSProperties = {
     flex: 1,
@@ -868,7 +949,7 @@ export function ChatMessageList({
   const skeletonContent =
     skeleton !== undefined ? skeleton : <ChatLoadingSkeleton />;
 
-  const isEmpty = messages.length === 0 && !isChatLoading;
+  const isEmpty = displayMessages.length === 0 && !isChatLoading;
 
   return (
     <>
@@ -891,7 +972,7 @@ export function ChatMessageList({
           )
         ) : (
           <MessageList
-            messages={messages}
+            messages={displayMessages}
             runPhase={runPhase}
             runActivity={runActivity}
             awaitingApprovalId={awaitingApprovalId ?? null}
@@ -905,6 +986,7 @@ export function ChatMessageList({
                 StyledUserMessage) as ComponentType<UserMessageProps>,
               AssistantMessage: AssistantMessageComponent,
               ThoughtWindow: ThoughtWindowComponent,
+              SystemMessage: StyledSystemMessage,
             }}
           />
         )}

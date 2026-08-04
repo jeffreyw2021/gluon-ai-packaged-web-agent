@@ -10,6 +10,38 @@ export const AgentConfigSchema = z.object({
   maxOutputTokens: z.number().int().positive().default(32_768),
   maxRounds: z.number().int().positive().default(25),
 
+  /**
+   * Controls automatic context window compression. When the estimated token
+   * count of the conversation exceeds `tokenBudget`, old messages are
+   * condensed into a compact summary before the model call. The full history
+   * is always preserved in the database — only the slice sent to the model
+   * is compressed. A system message is injected into the thread once to mark
+   * where the compression boundary is, visible in the UI.
+   */
+  contextWindow: z
+    .object({
+      /**
+       * Token budget for the conversation sent to the model. If unset, a
+       * default is inferred from the model name:
+       *   anthropic/*   → 160 000
+       *   openai/gpt-4* → 100 000
+       *   google/*      → 120 000
+       *   (other)       → 200 000
+       */
+      tokenBudget: z.number().int().positive().optional(),
+      /**
+       * Model used to produce the summary. Defaults to the main agent model.
+       * Prefer a cheap/fast model (e.g. "openai/gpt-4o-mini") to keep costs low.
+       */
+      summaryModel: z.string().optional(),
+      /** Max output tokens for the summary call. Default: 1024. */
+      summaryMaxTokens: z.number().int().positive().default(1024),
+      /** Keep at least this many recent messages unsummarized. Default: 8. */
+      minTailMessages: z.number().int().positive().default(8),
+    })
+    .optional()
+    .default({}),
+
   tools: z.record(z.string(), z.string()).default({}),
 
   actionBlocks: z.record(z.string(), z.string()).optional().default({}),

@@ -10,6 +10,8 @@ import { cancelRun, scheduleRun } from "../dispatch/queue";
 import { threadService } from "../thread/ThreadService";
 import { redisLiveBus } from "../live/RedisLiveBus";
 import { submitMessage } from "./submitMessage";
+import { loadConfig } from "../../config/loader";
+import { compressContext, CTX_SNAPSHOT_ID } from "../execution/contextWindow";
 
 export type AgentCommand =
   | {
@@ -33,6 +35,11 @@ export type AgentCommand =
       runId: string;
       toolCallId: string;
       output: unknown;
+    }
+  | {
+      /** On-demand user-triggered context summarization. */
+      type: "summarize";
+      chatId: string;
     };
 
 export class AgentGateway {
@@ -58,6 +65,8 @@ export class AgentGateway {
         return this.handleToolApproval(userId, command);
       case "clientToolOutput":
         return this.handleClientToolOutput(userId, command);
+      case "summarize":
+        return this.handleSummarize(userId, command.chatId);
       default:
         throw AgentError.badRequest("Unknown command", "UNKNOWN_COMMAND");
     }
@@ -238,6 +247,44 @@ export class AgentGateway {
       chatId: command.chatId,
       runId: command.runId,
       acceptedAt: new Date().toISOString(),
+    };
+  }
+
+  private async handleSummarize(
+    userId: string,
+    chatId: string,
+  ): Promise<CommandAck & { summarized: boolean }> {
+    const chat = await getDb().chat.findOwned(chatId, userId);
+    if (!chat) {
+      throw AgentError.notFound("Chat not found", "CHAT_NOT_FOUND");
+    }
+
+    const messages = await threadService.load(chatId);
+    // Strip any existing snapshot before compressing so we don't double-wrap.
+    const baseMessages = messages.filter((m) => m.id !== CTX_SNAPSHOT_ID);
+
+    const config = await loadConfig();
+    const { agentMessages, wasCompressed, splitIndex } = await compressContext(
+      baseMessages,
+      config.raw,
+      { force: true },
+    );
+
+    if (wasCompressed) {
+      const snapshotMsg = agentMessages[0];
+      // On-demand: append at the END of the thread so the user sees the marker
+      // at the bottom of their current view (where "Summarizing…" was).
+      // Automatic (budget-triggered) compression in turnExecutor uses the split
+      // point instead, giving a divider between old and kept messages.
+      await threadService.replaceContextSnapshot(chatId, snapshotMsg, Number.MAX_SAFE_INTEGER);
+    }
+
+    return {
+      ok: true,
+      chatId,
+      runId: "",
+      acceptedAt: new Date().toISOString(),
+      summarized: wasCompressed,
     };
   }
 }

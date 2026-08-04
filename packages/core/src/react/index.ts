@@ -36,6 +36,9 @@ export type { UseFileExtractionReturn } from "./hooks/useFileExtraction";
 export { useComposerActions } from "./hooks/useComposerActions";
 export type { UseComposerActionsOptions, UseComposerActionsReturn } from "./hooks/useComposerActions";
 
+export { useSlashCommands } from "./hooks/useSlashCommands";
+export type { UseSlashCommandsReturn } from "./hooks/useSlashCommands";
+
 // ── Layer 1: Drop-in composed panel ──────────────────────────────────────
 // Wraps AgentProvider + all layers in a styled shell. One import, ready.
 export { GluonAgentPanel } from "./panel/GluonAgentPanel";
@@ -71,6 +74,9 @@ export type { SuggestedPromptButtonProps } from "./styled/SuggestedPromptButton"
 // Input-bar components
 export { AttachButton } from "./styled/AttachButton";
 export type { AttachButtonProps } from "./styled/AttachButton";
+
+export { SlashCommandMenu } from "./styled/SlashCommandMenu";
+export type { SlashCommandMenuProps } from "./styled/SlashCommandMenu";
 
 export { ChatInput } from "./styled/ChatInput";
 export type { ChatInputProps, ChatInputHandle } from "./styled/ChatInput";
@@ -118,6 +124,12 @@ export type {
   ChatInputHandle as HeadlessChatInputHandle,
 } from "./input/ChatInput";
 
+export { HeadlessSlashCommandMenu } from "./input/SlashCommandMenu";
+export type {
+  SlashCommandMenuProps as HeadlessSlashCommandMenuProps,
+  SlashCommand,
+} from "./input/SlashCommandMenu";
+
 export { HeadlessSendButton } from "./buttons/SendButton";
 export type { SendButtonProps as HeadlessSendButtonProps } from "./buttons/SendButton";
 
@@ -139,6 +151,9 @@ export type { MessageListProps, MessageListComponentSlots, MessageListEmptyProps
 
 export { UserMessage } from "./messages/UserMessage";
 export type { UserMessageProps } from "./messages/UserMessage";
+
+export { SystemMessage } from "./messages/SystemMessage";
+export type { SystemMessageProps } from "./messages/SystemMessage";
 
 export { AssistantMessage } from "./messages/AssistantMessage";
 export type { AssistantMessageProps, AssistantMessageSlots } from "./messages/AssistantMessage";

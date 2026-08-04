@@ -99,6 +99,15 @@ export function createCommandsHandler(_opts?: HandlerOptions) {
           return Response.json(result, { status: 202 });
         }
 
+        if (body.type === "summarize") {
+          if (!body.chatId) throw AgentError.badRequest("chatId is required");
+          const result = await agentGateway.handle(userId, {
+            type: "summarize",
+            chatId: body.chatId,
+          });
+          return Response.json(result, { status: 200 });
+        }
+
         throw AgentError.badRequest(`Unknown command type: ${body.type}`);
       } catch (err) {
         return handleRouteError(err);
