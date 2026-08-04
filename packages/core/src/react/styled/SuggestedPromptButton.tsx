@@ -37,21 +37,21 @@ const CSS = `
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.8125rem;
-  color: #a3a3a3;
+  color: #525252;
   line-height: 1.375;
   transition: color 0.15s ease;
 }
-[data-gluon-prompt-btn]:hover .gluon-pb-text { color: #404040; }
-[data-gluon-prompt-btn][data-dark] .gluon-pb-text { color: #737373; }
-[data-gluon-prompt-btn][data-dark]:hover .gluon-pb-text { color: #e5e5e5; }
+[data-gluon-prompt-btn]:hover .gluon-pb-text { color: #171717; }
+[data-gluon-prompt-btn][data-dark] .gluon-pb-text { color: #a3a3a3; }
+[data-gluon-prompt-btn][data-dark]:hover .gluon-pb-text { color: #f5f5f5; }
 [data-gluon-prompt-btn] .gluon-pb-icon {
   flex-shrink: 0;
-  color: #d4d4d4;
+  color: #a3a3a3;
   transition: color 0.15s ease;
 }
-[data-gluon-prompt-btn]:hover .gluon-pb-icon { color: #a3a3a3; }
-[data-gluon-prompt-btn][data-dark] .gluon-pb-icon { color: #525252; }
-[data-gluon-prompt-btn][data-dark]:hover .gluon-pb-icon { color: #a3a3a3; }
+[data-gluon-prompt-btn]:hover .gluon-pb-icon { color: #525252; }
+[data-gluon-prompt-btn][data-dark] .gluon-pb-icon { color: #737373; }
+[data-gluon-prompt-btn][data-dark]:hover .gluon-pb-icon { color: #d4d4d4; }
 ` as const;
 
 export interface SuggestedPromptButtonProps {

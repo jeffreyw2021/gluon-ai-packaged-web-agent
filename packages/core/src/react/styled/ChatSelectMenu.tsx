@@ -20,6 +20,9 @@ const CSS = `
   box-shadow: 0 20px 25px -5px rgba(0,0,0,0.45), 0 8px 10px -6px rgba(0,0,0,0.4);
 }
 [data-gluon-chat-menu] .gluon-cm-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   padding: 6px;
   max-height: 288px;
   overflow-y: auto;

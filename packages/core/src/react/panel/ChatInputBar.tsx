@@ -22,24 +22,24 @@ import { X, Paperclip, ArrowRight, Square, Mic } from "lucide-react";
 
 const INPUTBAR_CSS = `
 [data-gluon-inputbar] {
-  --gluon-ib-fg: #262626;
-  --gluon-ib-fg-secondary: #525252;
-  --gluon-ib-fg-subtle: #a3a3a3;
+  --gluon-ib-fg: #171717;
+  --gluon-ib-fg-secondary: #404040;
+  --gluon-ib-fg-subtle: #737373;
   --gluon-ib-chip-bg: rgba(0,0,0,0.05);
   --gluon-ib-chip-border: rgba(0,0,0,0.07);
   --gluon-ib-box-bg: rgba(255,255,255,0.7);
   --gluon-ib-box-border: rgba(0,0,0,0.08);
-  --gluon-ib-disclaimer: #a3a3a3;
+  --gluon-ib-disclaimer: #737373;
 }
 [data-gluon-inputbar][data-dark] {
-  --gluon-ib-fg: #e5e5e5;
-  --gluon-ib-fg-secondary: #d4d4d4;
-  --gluon-ib-fg-subtle: #737373;
+  --gluon-ib-fg: #f5f5f5;
+  --gluon-ib-fg-secondary: #e5e5e5;
+  --gluon-ib-fg-subtle: #909090;
   --gluon-ib-chip-bg: rgba(255,255,255,0.08);
   --gluon-ib-chip-border: rgba(255,255,255,0.1);
   --gluon-ib-box-bg: rgba(0,0,0,0.4);
   --gluon-ib-box-border: rgba(255,255,255,0.1);
-  --gluon-ib-disclaimer: #737373;
+  --gluon-ib-disclaimer: #8a8a8a;
 }
 
 [data-gluon-inputbar] .gluon-ib-remove-btn {
@@ -496,7 +496,7 @@ export function ChatInputBar({
                 width: "100%",
                 background: "transparent",
                 padding: "14px 16px 6px",
-                fontSize: "0.875rem",
+                fontSize: "0.9375rem",
                 color: "var(--gluon-ib-fg)",
                 resize: "none",
                 outline: "none",

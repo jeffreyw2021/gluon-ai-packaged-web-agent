@@ -50,25 +50,25 @@ const MESSAGE_LIST_CSS = `
   }
 
   [data-gluon-msglist] {
-    --gluon-ml-fg: #262626;
-    --gluon-ml-fg-secondary: #525252;
-    --gluon-ml-fg-muted: #737373;
-    --gluon-ml-fg-subtle: #a3a3a3;
+    --gluon-ml-fg: #171717;
+    --gluon-ml-fg-secondary: #404040;
+    --gluon-ml-fg-muted: #525252;
+    --gluon-ml-fg-subtle: #737373;
     --gluon-ml-bubble: rgba(0,0,0,0.07);
     --gluon-ml-skel: #e5e5e5;
-    --gluon-ml-icon: #a3a3a3;
+    --gluon-ml-icon: #737373;
     --gluon-ml-loader-base: #d4d4d4;
-    --gluon-ml-loader-active: #737373;
+    --gluon-ml-loader-active: #525252;
     --gluon-ml-sweep: linear-gradient(118deg, transparent 0%, transparent 34%, rgba(255,255,255,0.05) 40%, rgba(255,255,255,0.22) 46%, rgba(248,252,255,0.52) 50%, rgba(255,255,255,0.22) 54%, rgba(255,255,255,0.05) 60%, transparent 66%, transparent 100%);
   }
   [data-gluon-msglist][data-dark] {
-    --gluon-ml-fg: #e5e5e5;
-    --gluon-ml-fg-secondary: #d4d4d4;
-    --gluon-ml-fg-muted: #a3a3a3;
-    --gluon-ml-fg-subtle: #737373;
+    --gluon-ml-fg: #f5f5f5;
+    --gluon-ml-fg-secondary: #e5e5e5;
+    --gluon-ml-fg-muted: #c9c9c9;
+    --gluon-ml-fg-subtle: #909090;
     --gluon-ml-bubble: rgba(255,255,255,0.1);
     --gluon-ml-skel: #404040;
-    --gluon-ml-icon: #737373;
+    --gluon-ml-icon: #909090;
     --gluon-ml-loader-base: #525252;
     --gluon-ml-loader-active: #d4d4d4;
     --gluon-ml-sweep: linear-gradient(118deg, transparent 0%, transparent 34%, rgba(255,255,255,0.04) 40%, rgba(255,255,255,0.14) 46%, rgba(255,255,255,0.32) 50%, rgba(255,255,255,0.14) 54%, rgba(255,255,255,0.04) 60%, transparent 66%, transparent 100%);
@@ -138,15 +138,15 @@ const MESSAGE_LIST_CSS = `
   /* ── Markdown output (assistant messages) ─────────────────────────── */
   .gluon-md {
     width: 100%;
-    font-size: 0.875rem;
-    line-height: 1.6;
-    color: #404040;
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: #1a1a1a;
     word-break: break-word;
   }
-  [data-gluon-msglist][data-dark] .gluon-md { color: #d4d4d4; }
+  [data-gluon-msglist][data-dark] .gluon-md { color: #ebebeb; }
   .gluon-md p {
-    font-size: 0.875rem;
-    line-height: 1.6;
+    font-size: 0.9375rem;
+    line-height: 1.65;
     margin-bottom: 0.5rem;
     white-space: normal;
   }
@@ -168,8 +168,8 @@ const MESSAGE_LIST_CSS = `
   .gluon-md li > ul,
   .gluon-md li > ol { margin-top: 0.25rem; margin-bottom: 0.25rem; }
   .gluon-md li {
-    font-size: 0.875rem;
-    line-height: 1.6;
+    font-size: 0.9375rem;
+    line-height: 1.65;
     margin-bottom: 0.125rem;
     display: list-item;
     padding-inline-start: 0;

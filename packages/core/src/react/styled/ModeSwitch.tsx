@@ -24,18 +24,18 @@ const CSS = `
   border: none;
   cursor: pointer;
   background: transparent;
-  color: #a3a3a3;
+  color: #737373;
   transition: color 0.15s;
 }
-[data-gluon-modeswitch] .gluon-ms-pill:hover { color: #525252; }
+[data-gluon-modeswitch] .gluon-ms-pill:hover { color: #262626; }
 [data-gluon-modeswitch] .gluon-ms-pill-active {
   background: rgba(255,255,255,0.8);
   color: #171717;
   font-weight: 500;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
-[data-gluon-modeswitch][data-dark] .gluon-ms-pill { color: #737373; }
-[data-gluon-modeswitch][data-dark] .gluon-ms-pill:hover { color: #d4d4d4; }
+[data-gluon-modeswitch][data-dark] .gluon-ms-pill { color: #a3a3a3; }
+[data-gluon-modeswitch][data-dark] .gluon-ms-pill:hover { color: #e5e5e5; }
 [data-gluon-modeswitch][data-dark] .gluon-ms-pill-active {
   background: rgba(255,255,255,0.12);
   color: #f5f5f5;

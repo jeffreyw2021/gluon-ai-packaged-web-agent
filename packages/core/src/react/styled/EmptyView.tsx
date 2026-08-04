@@ -29,21 +29,21 @@ const CSS = `
   gap: 4px;
 }
 [data-gluon-empty-view] .gluon-ev-heading {
-  font-size: 1rem;
-  font-weight: 500;
-  color: #a3a3a3;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #404040;
   line-height: 1.375;
   margin: 0;
 }
 [data-gluon-empty-view] .gluon-ev-sub {
-  font-size: 0.75rem;
-  color: #d4d4d4;
+  font-size: 0.8125rem;
+  color: #737373;
   line-height: 1.625;
   max-width: 180px;
   margin: 0;
 }
-[data-gluon-empty-view][data-dark] .gluon-ev-heading { color: #737373; }
-[data-gluon-empty-view][data-dark] .gluon-ev-sub { color: #525252; }
+[data-gluon-empty-view][data-dark] .gluon-ev-heading { color: #d4d4d4; }
+[data-gluon-empty-view][data-dark] .gluon-ev-sub { color: #8a8a8a; }
 [data-gluon-empty-view] .gluon-ev-prompts {
   display: flex;
   flex-direction: column;

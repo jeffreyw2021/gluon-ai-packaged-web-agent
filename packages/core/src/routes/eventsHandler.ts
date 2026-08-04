@@ -49,7 +49,14 @@ export function createEventsHandler() {
 
               writeEvent({ type: "connected", userId });
 
-              if (chatId) {
+              // Send streaming.snapshot only on fresh connects (no cursor).
+              // On reconnects the cursor is non-empty, so buffer replay + live events are
+              // sufficient. Sending the snapshot on reconnect would duplicate every token
+              // between the cursor position and the snapshot, because the snapshot contains
+              // the full accumulated text while the buffered delta events contain the same
+              // tokens as incremental deltas that then get appended on top.
+              const hasCursor = !!(cursor?.length);
+              if (chatId && !hasCursor) {
                 const activeRun = await chatJobRunRepository.findActiveForChat(chatId);
                 if (activeRun) {
                   const snapshot = await readStreamingSnapshot(activeRun.id);

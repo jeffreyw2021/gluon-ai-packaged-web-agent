@@ -65,13 +65,15 @@ REDIS_URL=redis://localhost:6379
 GLUON_CORS_ORIGIN=*
 ```
 
-`AGENT_DATABASE_URL` and `REDIS_URL` match the bundled docker-compose defaults — no changes needed if you use it as-is. Then start:
+`AGENT_DATABASE_URL` and `REDIS_URL` match the bundled docker-compose defaults — no changes needed if you use it as-is.
+
+`npx gluon-ai init` automatically runs `docker compose -f gluon/docker-compose.yml up -d --build` at the end. If it fails (Docker not running, missing env vars), re-run manually once everything is ready:
 
 ```bash
-docker compose -f gluon/docker-compose.yml up -d
+docker compose -f gluon/docker-compose.yml up -d --build
 ```
 
-The container starts, applies the DB schema automatically (idempotent SQL), and starts the BullMQ worker. Health check:
+The container applies the DB schema automatically and starts the BullMQ worker. Health check:
 
 ```bash
 curl http://localhost:3001/config

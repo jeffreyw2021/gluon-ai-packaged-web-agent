@@ -123,6 +123,15 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
           console.debug("[gluon:sse]", ev.type, "runId" in ev ? (ev as { runId: string }).runId?.slice(-6) : "");
         }
 
+        // SSE is delivering run events — the fallback invalidation timer is no longer needed.
+        // The timer was a safety net for when SSE completely fails to connect; cancel it
+        // the moment any run event arrives so mid-stream invalidations don't overwrite
+        // the SSE-accumulated cache with a stale DB checkpoint.
+        if (fallbackTimerRef.current !== null) {
+          clearTimeout(fallbackTimerRef.current);
+          fallbackTimerRef.current = null;
+        }
+
         // Fix C: reconstruct partial assistant message from in-flight snapshot on first connect
         if (ev.type === "streaming.snapshot") {
           const { snapshot, runId } = ev;
@@ -135,6 +144,15 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
             (old) => {
               const base = old ?? { messages: EMPTY_MESSAGES, runId: null };
               const existing = base.messages.find((m) => m.id === snapshot.messageId);
+
+              // Defense-in-depth: never regress accumulated text. If the existing message
+              // already has more text than the snapshot (e.g. from prior deltas on a
+              // fresh connect), keep the current state to avoid a flash of shorter text.
+              const existingTextLen = (existing?.parts ?? [])
+                .filter((p) => p.type === "text")
+                .reduce((s, p) => s + (p as { text: string }).text.length, 0);
+              if (existingTextLen >= snapshot.text.length) return base;
+
               const snapshotMsg = {
                 id: snapshot.messageId,
                 role: "assistant" as const,
@@ -202,6 +220,9 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
   // Fallback completion detector: when a new assistant message appears in the
   // cache while we are still pending (i.e. SSE missed run.completed), treat it
   // as a terminal event and clear the pending state.
+  // Guard: only fire when the run phase is NOT already live — the assistant message
+  // row is created in cache as soon as the first text delta arrives, so without this
+  // guard the fallback would clear outboundPending mid-stream instead of at completion.
   useEffect(() => {
     if (!outboundPending) {
       prevAssistantCountRef.current = assistantCount;
@@ -209,7 +230,9 @@ export function useAgentAdapter(opts: UseAgentAdapterOptions): AgentSessionAdapt
     }
     if (assistantCount > prevAssistantCountRef.current) {
       prevAssistantCountRef.current = assistantCount;
-      setOutboundPending(false);
+      if (!isLiveRunPhase(runStateRef.current.phase)) {
+        setOutboundPending(false);
+      }
     }
   }, [assistantCount, outboundPending]);
 

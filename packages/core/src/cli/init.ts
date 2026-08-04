@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
+import { execSync } from "node:child_process";
 import { reinstallLocalDepsWithLinks } from "./install";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -630,23 +631,52 @@ export async function initCommand(
 
   console.log(`
 ─────────────────────────────────────────────────────────────
-  ✨ Setup complete! Next steps:
+  ✨ Setup complete!
 ─────────────────────────────────────────────────────────────
 
-  1. cp .env.example .env  →  fill in ${envKeyNote}
+  Add these to your .env before starting (if not already set):
 
-  2. docker compose -f gluon/docker-compose.yml up -d
+    ${envKeyNote}=...
+    AGENT_DATABASE_URL=postgresql://gluon:gluon@localhost:5433/gluon
+    REDIS_URL=redis://localhost:6379
 
-  3. Add to your frontend:
-     <GluonAgentPanel basePath="${basePath}" />
+  Then add to your frontend:
+    <GluonAgentPanel basePath="${basePath}" />
 
-  4. Customize gluon/agent/system-prompt.md and gluon/agent/tools/
-
-  Health check: curl http://localhost:${answers.port}/config
+  Customize: gluon/agent/system-prompt.md  and  gluon/agent/tools/
 `);
 
   console.log(
     "  To add tools later:  npx gluon-ai add-tool <name>\n" +
       "  To upgrade Gluon:    edit gluon/Dockerfile → docker compose build gluon\n",
   );
+
+  // ── Auto-start Docker ─────────────────────────────────────────────────────
+
+  console.log(
+    "─────────────────────────────────────────────────────────────",
+  );
+  console.log("  Starting Docker container…");
+  console.log(
+    "─────────────────────────────────────────────────────────────\n",
+  );
+
+  try {
+    execSync(`docker compose -f gluon/docker-compose.yml up -d --build`, {
+      cwd: root,
+      stdio: "inherit",
+    });
+    console.log(`
+  ✅ Container started. Health check:
+
+     curl http://localhost:${answers.port}/config
+`);
+  } catch {
+    console.log(`
+  ⚠️  Docker start failed (Docker may not be running, or .env vars are missing).
+     Once ready, start manually:
+
+       docker compose -f gluon/docker-compose.yml up -d --build
+`);
+  }
 }
