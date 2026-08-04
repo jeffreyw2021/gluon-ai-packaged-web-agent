@@ -59,32 +59,88 @@ GLUON_CORS_ORIGIN=*
 npx gluon-ai init
 ```
 
-Three prompts: AI provider, model, and port. Done. The wizard generates a `gluon/` folder alongside your app:
+The wizard asks four questions: AI provider, model, port, and **run mode**. Run mode is the key choice:
+
+| | Docker | Node.js process |
+|---|---|---|
+| Gluon runs as | Docker container | Plain `node` process alongside your app |
+| Requires Docker | Yes (to run Gluon) | Only for infra (postgres + redis) — or skip if you supply your own |
+| Best for | Isolated, production-like setup | Faster local dev, existing infra |
+
+---
+
+#### Option 1 — Docker
+
+Generates a full container stack. The `gluon/` folder looks like this:
 
 ```
 your-project/
   gluon/
     agent.config.json          ← model, tools, context, auth
     Dockerfile                 ← installs gluon-ai@beta; CMD gluon-ai start
-    docker-compose.yml         ← gluon + postgres:17 + redis:8
+    docker-compose.yml         ← gluon container + postgres:17 + redis:8
     agent/
-      package.json             ← { "type": "module" }
+      package.json
       system-prompt.md
       tools/webSearch.ts       ← uses defineTool from "gluon-ai"
       context/datetime.ts
-  .env.example                 ← pre-filled defaults for compose infra
+  .env.example                 ← pre-filled with compose defaults
 ```
 
-`npx gluon-ai init` automatically runs `docker compose -f gluon/docker-compose.yml up -d --build` at the end. If it fails (Docker not running, missing env vars), re-run manually once everything is ready:
+`init` automatically runs `docker compose -f gluon/docker-compose.yml up -d --build` at the end. If it fails (Docker not running, env vars missing), re-run manually:
 
 ```bash
 docker compose -f gluon/docker-compose.yml up -d --build
 ```
 
-The container applies the DB schema automatically and starts the BullMQ worker. Health check:
+The container applies the DB schema on startup and starts the BullMQ worker. Health check:
 
 ```bash
 curl http://localhost:3001/config
+```
+
+---
+
+#### Option 2 — Node.js process
+
+No Dockerfile is generated. Instead, `init`:
+
+1. Writes `gluon/docker-compose.infra.yml` — postgres + redis only, no Gluon container.
+2. Injects `gluon-ai start` into your existing `npm run dev` script using `concurrently`, so Gluon starts automatically when you develop:
+
+```json
+"scripts": {
+  "dev:app":      "next dev",
+  "gluon:start":  "node --env-file=.env ./node_modules/.bin/gluon-ai start",
+  "dev":          "concurrently -n gluon,app -c blue,green \"npm run gluon:start\" \"npm run dev:app\""
+}
+```
+
+The `gluon/` folder is leaner:
+
+```
+your-project/
+  gluon/
+    agent.config.json
+    docker-compose.infra.yml   ← postgres + redis only (no gluon container)
+    agent/
+      package.json
+      system-prompt.md
+      tools/webSearch.ts
+      context/datetime.ts
+  .env.example
+```
+
+Start infra once (or skip if you already have postgres + redis):
+
+```bash
+docker compose -f gluon/docker-compose.infra.yml up -d
+```
+
+Then run your app as usual — Gluon starts alongside it:
+
+```bash
+npm run dev
 ```
 
 
