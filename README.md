@@ -323,7 +323,32 @@ import { GluonAgentPanel } from "gluon-ai/react";
 
 
 
-### 2. Styled atomic components (Layer 2)
+### 2. Compose regions (Layer 2)
+
+Styled atomic components assembled into full-height regions. Use when you want to replace one region (e.g. a custom top bar) while keeping the others as-is:
+
+```tsx
+import {
+  AgentProvider,
+  ChatTopBar,
+  ChatMessageList,
+  ChatInputBar,
+} from "gluon-ai/react";
+
+<AgentProvider basePath="/api/gluon-ai">
+  <ChatTopBar />
+  <ChatMessageList />
+  <ChatInputBar />
+</AgentProvider>;
+```
+
+`ChatTopBar`: `showReasoningPills`, `showChatHistory`, `onNewChat`, `slots.newChatButton`, `style` / `className` / `styles`, `darkMode`.
+
+`ChatMessageList`: `autoScroll`, `emptyView`, `skeleton`, `slots` (`userMessage`, `assistantMessage`, `thoughtWindow`, `textContent`), `style` / `className` / `styles`, `darkMode`.
+
+`ChatInputBar`: `placeholder`, `disclaimer`, `attach`, `voice`, `slots.sendButton`, `style` / `className` / `styles`, `darkMode`.
+
+### 3. Styled atomic components (Layer 3)
 
 Fine-grained, default-styled controls. Wire one component at a time into your own layout:
 
@@ -393,34 +418,6 @@ All of these components read from `AgentProvider`; no data props required. Only 
 | `MicButton`              | Styled mic toggle; share a `transcriber` instance with `TranscriptionIndicator`         |
 | `TranscriptionIndicator` | Pulsing dot + live transcript text; requires a shared `transcriber` prop                |
 | `SendButton`             | Styled send/stop toggle; wires `adapter` automatically                                  |
-
-
-
-
-### 3. Compose regions (Layer 3)
-
-Same styled atomic components, assembled into full-height regions. Use when you want to replace one region (e.g. a custom top bar) while keeping the others as-is:
-
-```tsx
-import {
-  AgentProvider,
-  ChatTopBar,
-  ChatMessageList,
-  ChatInputBar,
-} from "gluon-ai/react";
-
-<AgentProvider basePath="/api/gluon-ai">
-  <ChatTopBar />
-  <ChatMessageList />
-  <ChatInputBar />
-</AgentProvider>;
-```
-
-`ChatTopBar`: `showReasoningPills`, `showChatHistory`, `onNewChat`, `slots.newChatButton`, `style` / `className` / `styles`, `darkMode`.
-
-`ChatMessageList`: `autoScroll`, `emptyView`, `skeleton`, `slots` (`userMessage`, `assistantMessage`, `thoughtWindow`, `textContent`), `style` / `className` / `styles`, `darkMode`.
-
-`ChatInputBar`: `placeholder`, `disclaimer`, `attach`, `voice`, `slots.sendButton`, `style` / `className` / `styles`, `darkMode`.
 
 ### 4. Headless: full control
 
