@@ -6,11 +6,12 @@ Sometimes you want to build an AI-native product from scratch. Sometimes you jus
 
 Works with any React frontend: Next.js, Vite, Remix, SvelteKit, or anything else.
 
-Built for myself. Shared in case it's useful.
+Built for my workflow. Shared in case it's useful.
 
 ---
 
 ## Compatibility
+
 
 | Requirement            | Notes                                                                                                                        |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -20,9 +21,14 @@ Built for myself. Shared in case it's useful.
 | Redis                  | Bundled in the dev compose file. In production: any Redis-compatible service (Upstash, ElastiCache, etc.)                    |
 | AI provider            | OpenAI, Anthropic, Google, Mistral, Groq, xAI, DeepSeek, or Vercel AI Gateway. See [AI model providers](#ai-model-providers) |
 
+
 ---
 
+
+
 ## Quick start
+
+
 
 ### Step 1 — Install
 
@@ -54,6 +60,8 @@ your-project/
   .env.example                 ← pre-filled defaults for compose infra
 ```
 
+
+
 ### Step 3 — Set env vars and start
 
 Add these to your `.env` before starting the container:
@@ -79,6 +87,8 @@ The container applies the DB schema automatically and starts the BullMQ worker. 
 curl http://localhost:3001/config
 ```
 
+
+
 ### Step 4 — Add to your frontend
 
 `gluon-ai` is already installed from Step 1:
@@ -96,6 +106,8 @@ import { GluonAgentPanel } from "gluon-ai/react";
 That's enough for a working agent with web search, multi-chat, streaming, and the background worker.
 
 ---
+
+
 
 ## Deployment modes
 
@@ -160,7 +172,10 @@ docker build -f gluon/Dockerfile gluon/ -t my-app-gluon:latest
 # GLUON_UPSTREAM_URL=https://my-app-gluon.railway.app
 ```
 
+
+
 ### Platform decision guide
+
 
 | Host app deployment       | Gluon deployment                                | Latency to host app        |
 | ------------------------- | ----------------------------------------------- | -------------------------- |
@@ -171,7 +186,10 @@ docker build -f gluon/Dockerfile gluon/ -t my-app-gluon:latest
 | Vercel / serverless       | Separate container on Railway / Fly / Cloud Run | ~5–30 ms (cross-service)   |
 | Railway / Render / Fly    | Additional service in same project              | ~1–2 ms (internal network) |
 
+
 ---
+
+
 
 ## Tool data access patterns
 
@@ -227,15 +245,19 @@ Expose `/api/internal/*` routes protected by a shared secret — only reachable 
 
 ### Latency comparison
 
+
 | Access pattern       | Sidecar container    | Standalone container |
 | -------------------- | -------------------- | -------------------- |
 | DB query in tool     | ~0.5 ms (Docker net) | ~5–50 ms (real net)  |
 | Host app API in tool | ~0.5 ms (Docker net) | ~5–50 ms (real net)  |
 | LLM API call         | same                 | same                 |
 
+
 For most agent use cases, LLM calls dominate at 500–2000 ms. The ~0.5 ms Docker network overhead is irrelevant.
 
 ---
+
+
 
 ## Same-origin proxy (recommended for production)
 
@@ -267,6 +289,8 @@ Then use `basePath="/api/gluon"` instead of the full URL:
 
 ---
 
+
+
 ## Frontend: four layers of UI
 
 Everything lives under `gluon-ai/react`. Pick the layer that matches how much control you want.
@@ -283,6 +307,7 @@ import { GluonAgentPanel } from "gluon-ai/react";
 
 `basePath` defaults to `"/api/gluon-ai"` and can be omitted.
 
+
 | Prop                                  | Description                                                  |
 | ------------------------------------- | ------------------------------------------------------------ |
 | `basePath`                            | API route prefix (default `"/api/gluon-ai"`)                 |
@@ -294,6 +319,9 @@ import { GluonAgentPanel } from "gluon-ai/react";
 | `style` / `className`                 | Applied to the outermost shell                               |
 | `topBar` / `messageList` / `inputBar` | Prop overrides forwarded to each Layer 3 child               |
 | `children`                            | Replace the default body while keeping `AgentProvider`       |
+
+
+
 
 ### 2. Styled atomic components (Layer 2)
 
@@ -334,6 +362,7 @@ All of these components read from `AgentProvider`; no data props required. Only 
 
 **Top-bar components**
 
+
 | Export               | Description                                                           |
 | -------------------- | --------------------------------------------------------------------- |
 | `NewChatButton`      | `+` button; wires `useChatList().newChat` automatically               |
@@ -342,16 +371,20 @@ All of these components read from `AgentProvider`; no data props required. Only 
 | `ChatSelectMenu`     | Scrollable list of chat rows                                          |
 | `ChatSelectMenuItem` | Single chat row with delete affordance                                |
 
+
 **Message-list components**
+
 
 | Export                  | Description                                                            |
 | ----------------------- | ---------------------------------------------------------------------- |
 | `EmptyView`             | "How can I help?" empty state with suggested-prompt chips from context |
 | `SuggestedPromptButton` | Single prompt chip; accepts `label` + `onClick`                        |
 
+
 `EmptyView` props: `maxSuggestedPrompts` (default `3`), `suggestedPrompts` (falls back to context), `onSelect`, `darkMode`, `components.SuggestedPromptButton`.
 
 **Input-bar components**
+
 
 | Export                   | Description                                                                             |
 | ------------------------ | --------------------------------------------------------------------------------------- |
@@ -360,6 +393,9 @@ All of these components read from `AgentProvider`; no data props required. Only 
 | `MicButton`              | Styled mic toggle; share a `transcriber` instance with `TranscriptionIndicator`         |
 | `TranscriptionIndicator` | Pulsing dot + live transcript text; requires a shared `transcriber` prop                |
 | `SendButton`             | Styled send/stop toggle; wires `adapter` automatically                                  |
+
+
+
 
 ### 3. Compose regions (Layer 3)
 
@@ -400,12 +436,15 @@ import { AgentProvider } from "gluon-ai/react";
 
 **Panel / layout**
 
+
 | Export                      | Description                                                                                                                                                                        |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `AgentPanel`                | Headless skeleton with `data-slot` regions (`agent-panel`, `sidebar`, `main`, `header`, `body`, `input`). No built-in CSS; style via CSS or `classNames` / `styles` / render props |
 | `ChatList` / `ChatListItem` | Chat history list + single row                                                                                                                                                     |
 
+
 **Messages**
+
 
 | Export              | Description                                            |
 | ------------------- | ------------------------------------------------------ |
@@ -416,7 +455,9 @@ import { AgentProvider } from "gluon-ai/react";
 | `ConfirmationBlock` | Approval UI when a tool needs confirmation             |
 | `ActionBlockSlot`   | Renders a registered action-block component for a tool |
 
+
 **Input (headless)**
+
 
 | Export                                  | Description                                                  |
 | --------------------------------------- | ------------------------------------------------------------ |
@@ -428,7 +469,9 @@ import { AgentProvider } from "gluon-ai/react";
 | `RecordingIndicator` / `LiveTranscript` | Recording state + live transcript display                    |
 | `AttachmentChip`                        | Chip for an attached file                                    |
 
+
 **Hooks** (use inside `AgentProvider`)
+
 
 | Export                                     | Description                                                         |
 | ------------------------------------------ | ------------------------------------------------------------------- |
@@ -441,7 +484,10 @@ import { AgentProvider } from "gluon-ai/react";
 | `useRecorder` / `useSpeechTranscriber`     | Mic recording + transcription                                       |
 | `useFileExtraction` / `useComposerActions` | File text extraction + composer action helpers                      |
 
+
 ---
+
+
 
 ## Configure the agent (`agent.config.json`)
 
@@ -473,6 +519,7 @@ import { AgentProvider } from "gluon-ai/react";
 }
 ```
 
+
 | Field                        | What it does                                                           |
 | ---------------------------- | ---------------------------------------------------------------------- |
 | `model`                      | `provider/model` string. See [AI model providers](#ai-model-providers) |
@@ -487,15 +534,19 @@ import { AgentProvider } from "gluon-ai/react";
 | `suggestedPrompts`           | Empty-state chips (also served from `GET …/config`)                    |
 | `env.*`                      | Remap env var **names** if yours differ from the defaults              |
 
+
 Full schema: `[packages/core/agent.config.schema.json](packages/core/agent.config.schema.json)`
 
 ---
+
+
 
 ## AI model providers
 
 Set `model` in `agent.config.json` to a `provider/model` string. The prefix selects the provider; everything else is the model ID.
 
 For each provider, set its API key **and** install its optional SDK package. Gluon detects both at startup and registers the provider automatically. No code changes needed.
+
 
 | Provider  | Model prefix | Env var                        | Install                   |
 | --------- | ------------ | ------------------------------ | ------------------------- |
@@ -506,6 +557,7 @@ For each provider, set its API key **and** install its optional SDK package. Glu
 | Groq      | `groq`       | `GROQ_API_KEY`                 | `npm i @ai-sdk/groq`      |
 | xAI       | `xai`        | `XAI_API_KEY`                  | `npm i @ai-sdk/xai`       |
 | DeepSeek  | `deepseek`   | `DEEPSEEK_API_KEY`             | `npm i @ai-sdk/deepseek`  |
+
 
 All provider packages are optional. If a provider's package is missing or its key is not set, that prefix is silently skipped (no error, just unavailable).
 
@@ -527,6 +579,8 @@ ANTHROPIC_API_KEY=sk-ant-...
 { "model": "anthropic/claude-sonnet-4.6" }
 ```
 
+
+
 ### Via Vercel AI Gateway (optional; skips per-provider packages)
 
 Prefix any model string with `gateway/` to route through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). One key covers every supported model; no per-provider packages needed.
@@ -539,6 +593,8 @@ AI_GATEWAY_API_KEY=your_gateway_key
 { "model": "gateway/anthropic/claude-sonnet-4.6" }
 { "model": "gateway/google/gemini-2.0-flash" }
 ```
+
+
 
 ### Custom env var names
 
@@ -553,17 +609,25 @@ If your key is stored under a different name, remap it:
 
 ---
 
+
+
 ## Tools
+
+
 
 ### Default behaviour (no tools configured)
 
 Three built-in tools are always available, regardless of what you configure:
+
 
 | Tool                   | When it fires                                                                                                                |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `discover_tools`       | Agent calls this automatically before using any custom tool for the first time to read descriptions and parameter signatures |
 | `request_confirmation` | Called when a tool has `needsApproval: true`; pauses the run and shows a confirmation card in the UI                         |
 | `read_skill`           | Added automatically when `skills` is non-empty; lets the agent load a skill document on demand                               |
+
+
+
 
 ### Defining a tool
 
@@ -596,6 +660,7 @@ export default defineTool({
 
 All `defineTool` fields:
 
+
 | Field               | Required | Description                                                                                         |
 | ------------------- | -------- | --------------------------------------------------------------------------------------------------- |
 | `description`       | Yes      | Shown to the model; describe what the tool does and when to use it                                  |
@@ -606,6 +671,9 @@ All `defineTool` fields:
 | `ui.executingLabel` | No       | ThoughtWindow text while the tool is running (e.g. `"Searching…"`)                                  |
 | `ui.completedLabel` | No       | ThoughtWindow text after the tool finishes (e.g. `"Search done"`)                                   |
 | `ui.icon`           | No       | Lucide icon name for the ThoughtWindow row (e.g. `"Globe"`, `"FileText"`); defaults to `"Settings"` |
+
+
+
 
 ### Human approval
 
@@ -627,7 +695,11 @@ npx gluon-ai add-tool my_tool
 
 ---
 
+
+
 ## Skills
+
+
 
 ### What skills are
 
@@ -670,17 +742,23 @@ At runtime the agent receives an index of available skills and their numbers. It
 
 ### Skills vs context providers
 
+
 |              | Skills                                      | Context providers                                  |
 | ------------ | ------------------------------------------- | -------------------------------------------------- |
 | When loaded  | On demand by the agent (`read_skill`)       | Every request, unconditionally                     |
 | Content type | Static Markdown docs, procedures, reference | Dynamic values: current time, user state, env data |
 | Token cost   | Only when read                              | Always added to every system prompt                |
 
+
 Use **skills** for large reference material that is only sometimes needed. Use **context providers** for small dynamic strings that should always be present.
 
 ---
 
+
+
 ## Context providers
+
+
 
 ### What context providers do
 
@@ -719,6 +797,8 @@ List any number of files; each one contributes a line to the `## Context` block:
 }
 ```
 
+
+
 ### Accessing external data
 
 Context providers are regular async functions. You can fetch from your DB, call an API, or read environment variables:
@@ -741,7 +821,11 @@ export default async function (): Promise<string> {
 
 ---
 
+
+
 ## Auth
+
+
 
 ### Default behaviour (no config needed)
 
@@ -757,11 +841,13 @@ Wire in your own auth logic by creating a handler module and pointing `agent.con
 
 The handler is a TypeScript file that **default-exports** an async function receiving the raw `Request`. Return a value to tell Gluon what to do:
 
+
 | Return value         | Effect                                                                                     |
 | -------------------- | ------------------------------------------------------------------------------------------ |
 | `string` (non-empty) | Request is allowed; the string is used as the **userId** (scopes chat history, runs, etc.) |
 | `true`               | Request is allowed as the anonymous user `"anon"`                                          |
 | `false` or `null`    | Request is **rejected with HTTP 401**                                                      |
+
 
 ```typescript
 // agent/auth.ts  (example using NextAuth v5)
@@ -774,6 +860,8 @@ export default async function (req: Request): Promise<string | boolean | null> {
 }
 ```
 
+
+
 ### What the userId controls
 
 Once a userId is returned, Gluon:
@@ -781,6 +869,8 @@ Once a userId is returned, Gluon:
 - **Scopes all chat sessions** to that userId. Users only see their own chat history.
 - **Scopes all run records** to that userId. Billing, rate-limiting, and logs are per-user.
 - Passes the userId to **lifecycle hooks** (`onRunStart`, `onRunEnd`, `onRunError`) so you can record usage, enforce rate limits, or trigger billing per user.
+
+
 
 ### Role-based access
 
@@ -800,7 +890,11 @@ export default async function (req: Request) {
 
 ---
 
+
+
 ## Action blocks (in-stream UI)
+
+
 
 ### What action blocks do
 
@@ -834,6 +928,7 @@ export default function MyToolBlock({
 
 All `ActionBlockProps` fields:
 
+
 | Prop         | Type      | Description                                                                 |
 | ------------ | --------- | --------------------------------------------------------------------------- |
 | `toolInput`  | `unknown` | The validated input the agent passed to the tool                            |
@@ -841,6 +936,9 @@ All `ActionBlockProps` fields:
 | `toolName`   | `string`  | The registered tool name (e.g. `"my_tool"`)                                 |
 | `messageId`  | `string`  | ID of the assistant message this block belongs to                           |
 | `state`      | `"call"`  | `"result"`                                                                  |
+
+
+
 
 ### Wiring the component to the client
 
@@ -858,7 +956,11 @@ import MyToolBlock from "@/agent/blocks/MyToolBlock";
 
 ---
 
+
+
 ## Token usage & lifecycle hooks
+
+
 
 ### Default behaviour
 
@@ -926,11 +1028,14 @@ export function TokenCounter() {
 
 ---
 
+
+
 ## CLI reference
 
 ```text
 npx gluon-ai <command>
 ```
+
 
 | Command            | Flags                                         | Description                                                                                 |
 | ------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------- |
@@ -941,6 +1046,7 @@ npx gluon-ai <command>
 | `add-skill [name]` |                                               | Scaffold `agent/skills/<name>.md` + register in config                                      |
 | `uninstall [dir]`  | interactive confirm                           | Remove scaffolded files and uninstall the package                                           |
 | `--help` / `-h`    |                                               | Print help                                                                                  |
+
 
 Uninstall does **not** drop DB tables. Remove them yourself if needed:
 
@@ -956,7 +1062,10 @@ npm run gluon:uninstall
 
 ---
 
+
+
 ## Package exports
+
 
 | Import                     | Use for                                                                      |
 | -------------------------- | ---------------------------------------------------------------------------- |
@@ -969,9 +1078,12 @@ npm run gluon:uninstall
 | `gluon-ai/instrumentation` | `register()` starts the worker (Next.js embedded mode — still supported)     |
 | `gluon-ai/cli`             | CLI command implementations (used by the `gluon-ai` bin)                     |
 
+
 API surface under the catch-all (last path segment): `events`, `thread`, `chats`, `commands`, `config`.
 
 ---
+
+
 
 ## Currently working on
 
@@ -982,6 +1094,8 @@ API surface under the catch-all (last path segment): `events`, `thread`, `chats`
 - Stability, tests, and multi-DB edge cases
 
 ---
+
+
 
 ## License
 
