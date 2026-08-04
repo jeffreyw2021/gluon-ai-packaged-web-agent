@@ -38,7 +38,22 @@ npm install gluon-ai@beta
 
 This puts the React components (`gluon-ai/react`) into your project and makes the CLI available locally so the next step uses your installed version.
 
-### Step 2 — Scaffold
+### Step 2 — Set env vars
+
+Add these to your `.env` before running `init`:
+
+```env
+OPENAI_API_KEY=sk-...              # or whichever provider key you chose
+AGENT_DATABASE_URL=postgresql://gluon:gluon@localhost:5433/gluon
+REDIS_URL=redis://localhost:6379
+GLUON_CORS_ORIGIN=*
+```
+
+`AGENT_DATABASE_URL` and `REDIS_URL` match the bundled docker-compose defaults — no changes needed if you use it as-is.
+
+
+
+### Step 3 — Scaffold
 
 ```bash
 npx gluon-ai init
@@ -59,21 +74,6 @@ your-project/
       context/datetime.ts
   .env.example                 ← pre-filled defaults for compose infra
 ```
-
-
-
-### Step 3 — Set env vars and start
-
-Add these to your `.env` before starting the container:
-
-```env
-OPENAI_API_KEY=sk-...              # or whichever provider key you chose
-AGENT_DATABASE_URL=postgresql://gluon:gluon@localhost:5433/gluon
-REDIS_URL=redis://localhost:6379
-GLUON_CORS_ORIGIN=*
-```
-
-`AGENT_DATABASE_URL` and `REDIS_URL` match the bundled docker-compose defaults — no changes needed if you use it as-is.
 
 `npx gluon-ai init` automatically runs `docker compose -f gluon/docker-compose.yml up -d --build` at the end. If it fails (Docker not running, missing env vars), re-run manually once everything is ready:
 
