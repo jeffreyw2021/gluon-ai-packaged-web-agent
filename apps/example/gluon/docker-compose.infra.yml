@@ -1,0 +1,29 @@
+# Infrastructure only — postgres + redis for Gluon
+# Gluon itself runs as a Node.js process alongside your app (via npm run dev).
+# Start infra: docker compose -f gluon/docker-compose.infra.yml up -d
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: gluon
+      POSTGRES_PASSWORD: gluon
+      POSTGRES_DB: gluon
+    ports:
+      - "5433:5432"          # 5433 on host to avoid clashes with local postgres
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gluon"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+  redis_data:

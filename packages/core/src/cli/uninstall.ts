@@ -278,6 +278,64 @@ function stripNextConfig(ctx: UninstallContext) {
   log("strip", `${configPath} (removed gluon config entries)`);
 }
 
+// ── package.json — strip Node.js process mode dev-script injection ─────────
+
+/**
+ * Reverses what injectDevScript() did during Node.js process mode init:
+ *   - Restores original dev command from dev:app
+ *   - Removes gluon:start and dev:app scripts
+ *   - Removes gluon:uninstall script
+ *   - Removes concurrently from devDependencies
+ */
+function stripDevScriptInjection(ctx: UninstallContext) {
+  const pkgPath = path.join(ctx.root, "package.json");
+  if (!exists(pkgPath)) {
+    log("skip", "package.json dev script injection (not found)");
+    return;
+  }
+
+  let pkg: Record<string, unknown>;
+  try {
+    pkg = JSON.parse(read(pkgPath)) as Record<string, unknown>;
+  } catch {
+    log("skip", "package.json dev script injection (could not parse)");
+    return;
+  }
+
+  const scripts = (pkg.scripts ?? {}) as Record<string, string>;
+
+  // Only act if we injected this (marker: gluon:start exists)
+  if (!scripts["gluon:start"]) {
+    log("skip", "package.json dev script injection (not present)");
+    return;
+  }
+
+  // Restore original dev command from dev:app
+  if (scripts["dev:app"]) {
+    scripts["dev"] = scripts["dev:app"];
+    delete scripts["dev:app"];
+    log("strip", "package.json — restored dev script from dev:app");
+  } else {
+    // dev:app not found (edge case), best effort: strip concurrently wrapper
+    log("warn", "dev:app not found — could not restore original dev script automatically");
+    delete scripts["dev"];
+  }
+
+  delete scripts["gluon:start"];
+
+  pkg.scripts = scripts;
+
+  // Remove concurrently from devDependencies if present
+  const devDeps = (pkg.devDependencies ?? {}) as Record<string, string>;
+  if (devDeps["concurrently"]) {
+    delete devDeps["concurrently"];
+    pkg.devDependencies = devDeps;
+    log("strip", "package.json — removed concurrently from devDependencies");
+  }
+
+  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf-8");
+}
+
 // ── package.json — remove gluon:uninstall script ──────────────────────────
 
 function stripUninstallScript(ctx: UninstallContext) {
@@ -337,6 +395,50 @@ function uninstallPackage(ctx: UninstallContext) {
   }
 }
 
+// ── allowScripts cleanup ───────────────────────────────────────────────────
+
+/**
+ * Remove gluon-ai and @prisma/client entries from the npm allowScripts block
+ * that gets written when the user runs `npm install-scripts approve`.
+ */
+function stripAllowScripts(ctx: UninstallContext) {
+  const pkgPath = path.join(ctx.root, "package.json");
+  if (!exists(pkgPath)) return;
+
+  let pkg: Record<string, unknown>;
+  try {
+    pkg = JSON.parse(read(pkgPath)) as Record<string, unknown>;
+  } catch {
+    return;
+  }
+
+  const allowScripts = pkg.allowScripts as Record<string, boolean> | undefined;
+  if (!allowScripts) {
+    log("skip", "package.json allowScripts (not present)");
+    return;
+  }
+
+  let changed = false;
+  for (const key of Object.keys(allowScripts)) {
+    if (key.startsWith("gluon-ai@") || key.startsWith("@prisma/client@")) {
+      delete allowScripts[key];
+      changed = true;
+    }
+  }
+
+  if (!changed) {
+    log("skip", "package.json allowScripts (no gluon entries found)");
+    return;
+  }
+
+  if (Object.keys(allowScripts).length === 0) {
+    delete pkg.allowScripts;
+  }
+
+  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf-8");
+  log("strip", "package.json — removed gluon allowScripts entries");
+}
+
 // ── .next cache ────────────────────────────────────────────────────────────
 
 function clearNextCache(ctx: UninstallContext) {
@@ -381,12 +483,13 @@ export async function uninstallCommand(targetDir: string) {
   );
 
   console.log("  This will:\n");
-  console.log("    • Delete  gluon/  directory (docker, agent config, tools)");
+  console.log("    • Delete  gluon/  directory (agent config, tools, docker files)");
   console.log(`    • Delete  ${ctx.appRouterDir}/api/gluon/  (streaming proxy route)`);
   console.log("    • Strip   agent env vars from .env.example");
   console.log("    • Strip   gluon config entries from next.config");
-  console.log("    • Strip   scripts.gluon:uninstall from package.json");
+  console.log("    • Strip   gluon:start / dev:app / gluon:uninstall from package.json scripts");
   console.log("    • Uninstall gluon-ai npm package");
+  console.log("    • Strip   gluon allowScripts entries from package.json");
   console.log("    • Clear   .next build cache\n");
   console.log(
     "  Note: Agent database tables (gluon_chat, gluon_chat_job_run) are NOT\n" +
@@ -460,7 +563,10 @@ export async function uninstallCommand(targetDir: string) {
   // 6. next.config — strip rewrites or serverExternalPackages
   stripNextConfig(ctx);
 
-  // 7. package.json — remove gluon:uninstall convenience script
+  // 7. package.json — strip Node.js process mode dev injection (gluon:start, dev:app, concurrently)
+  stripDevScriptInjection(ctx);
+
+  // 7b. package.json — remove gluon:uninstall convenience script
   stripUninstallScript(ctx);
 
   // 8. .next cache
@@ -468,6 +574,9 @@ export async function uninstallCommand(targetDir: string) {
 
   // 9. npm uninstall (last — so all files are gone first)
   uninstallPackage(ctx);
+
+  // 10. Strip stale allowScripts entries left by npm install-scripts approve
+  stripAllowScripts(ctx);
 
   console.log(`
 ─────────────────────────────────────────────────────────────

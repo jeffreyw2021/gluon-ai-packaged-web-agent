@@ -14,33 +14,24 @@ import type { ChatInputBarProps } from "./ChatInputBar";
 // ── Scoped CSS ─────────────────────────────────────────────────────────────
 
 const PANEL_CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap');
+
 [data-gluon-agent-panel] {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  border-left: 1px solid rgba(0, 0, 0, 0.08);
-  background: #ffffff;
-  box-sizing: border-box;
-  min-width: 0;
-  min-height: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-[data-gluon-agent-panel][data-dark] {
-  border-left-color: rgba(255, 255, 255, 0.1);
-  background: #0a0a0a;
-}
-
-/* Frosted glass: high-opacity tint + blur so the panel still reads as
-   clearly light or dark even when the workspace behind it is the opposite. */
 [data-gluon-agent-panel][data-frosted] {
   backdrop-filter: blur(64px) saturate(1.5);
   -webkit-backdrop-filter: blur(64px) saturate(1.5);
-  background: rgba(255, 255, 255, 0.85);
 }
 
-[data-gluon-agent-panel][data-frosted][data-dark] {
-  background: rgba(10, 10, 10, 0.85);
+/* Force all form elements inside the panel to inherit Urbanist */
+[data-gluon-agent-panel] textarea,
+[data-gluon-agent-panel] input,
+[data-gluon-agent-panel] button,
+[data-gluon-agent-panel] select {
+  font-family: inherit;
 }
 ` as const;
 
@@ -126,6 +117,26 @@ export function GluonAgentPanel({
   inputBar,
   children,
 }: GluonAgentPanelProps) {
+  const background = frostedGlass
+    ? (darkMode ? "rgba(10, 10, 10, 0.85)" : "rgba(255, 255, 255, 0.85)")
+    : (darkMode ? "#0a0a0a" : "#ffffff");
+
+  const panelStyle: CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    width: "100%",
+    height: "100%",
+    background,
+    borderLeft: darkMode
+      ? "1px solid rgba(255, 255, 255, 0.1)"
+      : "1px solid rgba(0, 0, 0, 0.08)",
+    boxSizing: "border-box",
+    minWidth: 0,
+    minHeight: 0,
+    fontFamily: "'Urbanist', system-ui, sans-serif",
+    ...style,
+  };
+
   return (
     <AgentProvider
       basePath={basePath}
@@ -138,7 +149,7 @@ export function GluonAgentPanel({
         {...(darkMode ? { "data-dark": "" } : {})}
         {...(frostedGlass ? { "data-frosted": "" } : {})}
         className={className}
-        style={style}
+        style={panelStyle}
       >
         <style>{PANEL_CSS}</style>
         {children ?? (

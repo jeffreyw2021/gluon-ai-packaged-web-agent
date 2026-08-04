@@ -1,7 +1,7 @@
 import { generateId, type UIMessage } from "ai";
 import { TOOL_PART_STATE, normalizeToolPartState } from "../thread/toolPartStatePolicy";
 
-const BUILT_IN_INTERNAL_TOOLS = new Set(["read_skill", "request_confirmation"]);
+const BUILT_IN_INTERNAL_TOOLS = new Set(["load_skill", "pause_for_input"]);
 
 export function dropEmptyPartsMessages(messages: UIMessage[]): UIMessage[] {
   return messages.filter((msg) => (msg.parts?.length ?? 0) > 0);
@@ -70,7 +70,7 @@ export function redactInternalToolOutputsForAgent(
         return part;
       }
 
-      if (toolName === "read_skill") {
+      if (toolName === "load_skill") {
         const skill =
           row.input &&
           typeof row.input === "object" &&

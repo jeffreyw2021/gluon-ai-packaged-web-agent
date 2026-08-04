@@ -1,0 +1,28 @@
+{
+  "model": "openai/gpt-4o-mini",
+  "systemPrompt": "./agent/system-prompt.md",
+  "maxOutputTokens": 16384,
+  "maxRounds": 25,
+  "tools": {
+    "web_search": "./agent/tools/webSearch.ts"
+  },
+  "actionBlocks": {},
+  "skills": [],
+  "context": [
+    "./agent/context/datetime.ts"
+  ],
+  "auth": {
+    "handler": "allow"
+  },
+  "sendReasoning": false,
+  "suggestedPrompts": [
+    "What's happening in the news today?",
+    "Search for the latest on AI models",
+    "Summarize recent developments in technology"
+  ],
+  "env": {
+    "databaseUrl": "AGENT_DATABASE_URL",
+    "redisUrl": "REDIS_URL",
+    "openaiApiKey": "OPENAI_API_KEY"
+  }
+}

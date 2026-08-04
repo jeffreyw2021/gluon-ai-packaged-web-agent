@@ -10,25 +10,7 @@ import { ChatSelect } from "../styled/ChatSelect";
 import type { ChatSelectProps } from "../styled/ChatSelect";
 
 // ── Scoped CSS ─────────────────────────────────────────────────────────────
-
-const TOPBAR_CSS = `
-[data-gluon-topbar] {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  flex-shrink: 0;
-  background: transparent;
-  box-sizing: border-box;
-  position: relative;
-}
-[data-gluon-topbar][data-dark] {
-  border-bottom-color: rgba(255,255,255,0.08);
-}
-` as const;
-
-// ── Types ─────────────────────────────────────────────────────────────────
+// (No CSS needed; all defaults are in the JS rootStyle object below.)
 
 export interface ChatTopBarStyles {
   root?: CSSProperties;
@@ -73,14 +55,29 @@ export function ChatTopBar({
     styles: styles?.historyButton ? { trigger: styles.historyButton } : undefined,
   };
 
+  const rootStyle: CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "8px 10px",
+    borderBottom: darkMode
+      ? "1px solid rgba(255,255,255,0.08)"
+      : "1px solid rgba(0,0,0,0.06)",
+    flexShrink: 0,
+    background: "transparent",
+    boxSizing: "border-box",
+    position: "relative",
+    ...styles?.root,
+    ...style,
+  };
+
   return (
     <>
-      <style>{TOPBAR_CSS}</style>
       <div
         data-gluon-topbar=""
         {...(darkMode ? { "data-dark": "" } : {})}
         className={`gluon-topbar${className ? ` ${className}` : ""}`}
-        style={{ ...styles?.root, ...style }}
+        style={rootStyle}
       >
         {slots?.newChatButton ?? (
           <NewChatButton

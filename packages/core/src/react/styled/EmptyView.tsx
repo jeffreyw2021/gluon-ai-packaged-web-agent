@@ -6,13 +6,6 @@ import { SuggestedPromptButton } from "./SuggestedPromptButton";
 import type { SuggestedPromptButtonProps } from "./SuggestedPromptButton";
 
 const CSS = `
-[data-gluon-empty-view] {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding-top: 16px;
-  box-sizing: border-box;
-}
 [data-gluon-empty-view] .gluon-ev-body {
   flex: 1;
   display: flex;
@@ -29,14 +22,14 @@ const CSS = `
   gap: 4px;
 }
 [data-gluon-empty-view] .gluon-ev-heading {
-  font-size: 1.125rem;
+  font-size: 18px;
   font-weight: 600;
   color: #404040;
   line-height: 1.375;
   margin: 0;
 }
 [data-gluon-empty-view] .gluon-ev-sub {
-  font-size: 0.8125rem;
+  font-size: 13px;
   color: #737373;
   line-height: 1.625;
   max-width: 180px;
@@ -96,6 +89,15 @@ export function EmptyView({
   const handleSelect = onSelect ?? ((p: string) => { void adapter.sendUserMessage(p); });
   const PromptButton = components?.SuggestedPromptButton ?? SuggestedPromptButton;
 
+  const rootStyle: CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    paddingTop: 16,
+    boxSizing: "border-box",
+    ...style,
+  };
+
   return (
     <>
       <style>{CSS}</style>
@@ -103,7 +105,7 @@ export function EmptyView({
         data-gluon-empty-view=""
         {...(darkMode ? { "data-dark": "" } : {})}
         className={className}
-        style={style}
+        style={rootStyle}
       >
         <div className="gluon-ev-body">
           <div className="gluon-ev-labels">

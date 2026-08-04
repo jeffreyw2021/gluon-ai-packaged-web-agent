@@ -68,7 +68,7 @@ function getReasoningContent(msg: UIMessage): string {
 
 /** Tool names that render in their own dedicated surface (ConfirmationBlock etc.)
  *  and should NOT appear as rows in the ThoughtWindow strip. */
-const HIDDEN_IN_THOUGHT_STRIP = new Set(["request_confirmation"]);
+const HIDDEN_IN_THOUGHT_STRIP = new Set(["pause_for_input"]);
 
 /** Returns tool summaries for the ThoughtWindow strip.
  *  In AI SDK v6, tool parts have type "tool-<toolName>" (e.g. "tool-web_search"). */

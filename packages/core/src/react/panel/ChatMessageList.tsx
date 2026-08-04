@@ -122,7 +122,7 @@ const MESSAGE_LIST_CSS = `
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 0.8125rem;
+    font-size: 14px;
     color: var(--gluon-ml-fg-muted);
     line-height: 1.375;
     transition: color 0.15s ease;
@@ -138,14 +138,14 @@ const MESSAGE_LIST_CSS = `
   /* ── Markdown output (assistant messages) ─────────────────────────── */
   .gluon-md {
     width: 100%;
-    font-size: 0.9375rem;
+    font-size: 14px;
     line-height: 1.65;
     color: #1a1a1a;
     word-break: break-word;
   }
   [data-gluon-msglist][data-dark] .gluon-md { color: #ebebeb; }
   .gluon-md p {
-    font-size: 0.9375rem;
+    font-size: 14px;
     line-height: 1.65;
     margin-bottom: 0.5rem;
     white-space: normal;
@@ -168,7 +168,7 @@ const MESSAGE_LIST_CSS = `
   .gluon-md li > ul,
   .gluon-md li > ol { margin-top: 0.25rem; margin-bottom: 0.25rem; }
   .gluon-md li {
-    font-size: 0.9375rem;
+    font-size: 14px;
     line-height: 1.65;
     margin-bottom: 0.125rem;
     display: list-item;
@@ -181,15 +181,15 @@ const MESSAGE_LIST_CSS = `
     margin-bottom: 0.5rem;
     line-height: 1.3;
   }
-  .gluon-md h1 { font-size: 1.25rem; }
-  .gluon-md h2 { font-size: 1.125rem; }
-  .gluon-md h3 { font-size: 1rem; }
+  .gluon-md h1 { font-size: 20px; }
+  .gluon-md h2 { font-size: 18px; }
+  .gluon-md h3 { font-size: 16px; }
   .gluon-md code {
     background-color: rgba(0,0,0,0.05);
     border-radius: 4px;
     padding: 0.1em 0.3em;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.9em;
+    font-size: 13px;
   }
   .gluon-md pre {
     background-color: rgba(0,0,0,0.05);
@@ -216,7 +216,7 @@ const MESSAGE_LIST_CSS = `
     border-top-color: rgba(255,255,255,0.1);
   }
   .gluon-md table {
-    font-size: 0.875rem;
+    font-size: 14px;
     display: block;
     width: max-content;
     max-width: 100%;
@@ -318,7 +318,7 @@ function ThinkingLabel({ verb }: { verb: string }) {
     >
       <span
         style={{
-          fontSize: "0.6875rem",
+          fontSize: "13px",
           fontWeight: 500,
           fontStyle: "italic",
           textTransform: "capitalize",
@@ -453,7 +453,7 @@ function ToolRow({
       {isRunning ? <DiagonalScanLoader /> : <ToolIcon icon={ui?.icon} />}
       <span
         style={{
-          fontSize: "0.6875rem",
+          fontSize: "13px",
           fontWeight: 500,
           color: "var(--gluon-ml-fg-muted)",
           flex: 1,
@@ -526,7 +526,7 @@ function StyledThoughtWindow({
         ) : (
           <span
             style={{
-              fontSize: "0.6875rem",
+              fontSize: "13px",
               fontStyle: "italic",
               color: "var(--gluon-ml-fg-subtle)",
               textTransform: "capitalize",
@@ -569,7 +569,7 @@ function StyledThoughtWindow({
             {reasoningText && (
               <p
                 style={{
-                  fontSize: "0.6875rem",
+                  fontSize: "12px",
                   lineHeight: 1.625,
                   color: "var(--gluon-ml-fg-muted)",
                   whiteSpace: "pre-wrap",
@@ -632,12 +632,12 @@ function StyledUserMessage({ message, style }: UserMessageProps) {
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
-                    padding: "6px 10px",
-                    borderRadius: 12,
-                    background: "var(--gluon-ml-bubble)",
-                    fontSize: "0.6875rem",
-                    color: "var(--gluon-ml-fg-secondary)",
-                    maxWidth: 180,
+                  padding: "6px 10px",
+                  borderRadius: 12,
+                  background: "var(--gluon-ml-bubble)",
+                  fontSize: "12px",
+                  color: "var(--gluon-ml-fg-secondary)",
+                  maxWidth: 180,
                   }}
                 >
                   <FileText
@@ -657,7 +657,7 @@ function StyledUserMessage({ message, style }: UserMessageProps) {
                   <span
                     style={{
                       flexShrink: 0,
-                      fontSize: "0.625rem",
+                      fontSize: "12px",
                       fontWeight: 500,
                       color: "var(--gluon-ml-fg-subtle)",
                       textTransform: "uppercase",
@@ -675,7 +675,7 @@ function StyledUserMessage({ message, style }: UserMessageProps) {
                 borderRadius: 16,
                 background: "var(--gluon-ml-bubble)",
                 padding: "10px 14px",
-                fontSize: "0.875rem",
+                fontSize: "14px",
                 lineHeight: 1.625,
                 color: "var(--gluon-ml-fg)",
                 whiteSpace: "pre-wrap",

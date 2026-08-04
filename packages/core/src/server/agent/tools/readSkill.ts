@@ -2,10 +2,10 @@
 import { tool } from "ai";
 import { z } from "zod";
 
-export function createReadSkillTool(skills: string[]) {
+export function createLoadSkillTool(skills: string[]) {
   return tool({
     description:
-      "Read a skill document to learn how to use a specific capability or follow a workflow. " +
+      "Load a skill document to learn how to use a specific capability or follow a workflow. " +
       "Call this before using domain-specific tools for the first time in a conversation.",
     inputSchema: z.object({
       index: z

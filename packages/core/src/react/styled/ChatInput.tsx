@@ -25,7 +25,7 @@ const CSS = `
   width: 100%;
   background: transparent;
   padding: 14px 16px 6px;
-  font-size: 0.875rem;
+  font-size: 14px;
   color: #262626;
   resize: none;
   outline: none;
@@ -131,7 +131,7 @@ export const ChatInput = React.forwardRef<ChatInputHandle, ChatInputProps>(
                 width: "100%",
                 background: "transparent",
                 padding: "14px 16px 6px",
-                fontSize: "0.875rem",
+                fontSize: "14px",
                 color: darkMode ? "#e5e5e5" : "#262626",
                 resize: "none",
                 outline: "none",

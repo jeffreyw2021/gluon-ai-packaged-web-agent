@@ -11,7 +11,7 @@ const CSS = `
   padding: 8px 12px;
   border-radius: 8px;
   text-align: left;
-  font-size: 0.75rem;
+  font-size: 12px;
   background: transparent;
   border: none;
   cursor: pointer;

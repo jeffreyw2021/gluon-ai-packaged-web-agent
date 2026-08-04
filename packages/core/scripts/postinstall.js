@@ -80,7 +80,7 @@ const placeholderUrl =
 
 const result = spawnSync(
   "npx",
-  ["--yes", "prisma", "generate", "--schema", schemaPath],
+  ["--yes", "prisma@6", "generate", "--schema", schemaPath],
   {
     stdio: "inherit",
     shell: true,

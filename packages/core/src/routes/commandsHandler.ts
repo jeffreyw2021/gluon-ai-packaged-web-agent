@@ -1,6 +1,6 @@
 
 import { loadConfig } from "../config/loader";
-import { commandService } from "../server/commands/CommandService";
+import { agentGateway } from "../server/commands/AgentGateway";
 import { prisma } from "../server/db/prismaClient";
 import { AgentError, handleRouteError } from "../AgentError";
 import { generateId } from "ai";
@@ -51,7 +51,7 @@ export function createCommandsHandler(_opts?: HandlerOptions) {
             });
           }
 
-          const result = await commandService.handle(userId, {
+          const result = await agentGateway.handle(userId, {
             type: "send",
             chatId,
             clientMessageId: body.clientMessageId ?? generateId(),
@@ -63,7 +63,7 @@ export function createCommandsHandler(_opts?: HandlerOptions) {
 
         if (body.type === "stop") {
           if (!body.chatId) throw AgentError.badRequest("chatId is required");
-          const result = await commandService.handle(userId, {
+          const result = await agentGateway.handle(userId, {
             type: "stop",
             chatId: body.chatId,
           });
@@ -74,7 +74,7 @@ export function createCommandsHandler(_opts?: HandlerOptions) {
           if (!body.chatId || !body.runId || !body.approvalId || body.approved === undefined) {
             throw AgentError.badRequest("chatId, runId, approvalId, approved are required");
           }
-          const result = await commandService.handle(userId, {
+          const result = await agentGateway.handle(userId, {
             type: "toolApproval",
             chatId: body.chatId,
             runId: body.runId,
@@ -89,7 +89,7 @@ export function createCommandsHandler(_opts?: HandlerOptions) {
           if (!body.chatId || !body.runId || !body.toolCallId) {
             throw AgentError.badRequest("chatId, runId, toolCallId are required");
           }
-          const result = await commandService.handle(userId, {
+          const result = await agentGateway.handle(userId, {
             type: "clientToolOutput",
             chatId: body.chatId,
             runId: body.runId,

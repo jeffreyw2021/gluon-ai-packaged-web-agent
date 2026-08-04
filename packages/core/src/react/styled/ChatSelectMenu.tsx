@@ -31,7 +31,7 @@ const CSS = `
 [data-gluon-chat-menu] .gluon-cm-scroll::-webkit-scrollbar { display: none; }
 [data-gluon-chat-menu] .gluon-cm-empty {
   padding: 20px 12px;
-  font-size: 0.75rem;
+  font-size: 12px;
   color: #a3a3a3;
   text-align: center;
   margin: 0;

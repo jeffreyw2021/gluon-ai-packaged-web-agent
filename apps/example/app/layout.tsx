@@ -1,22 +1,15 @@
-import type { ReactNode } from "react";
-import { AgentProvider } from "easy-setup-web-agent/react";
-import WeatherBlock from "../agent/blocks/WeatherBlock";
+import type { Metadata } from "next";
+import "./globals.css";
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export const metadata: Metadata = {
+  title: "Example",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body style={{ margin: 0, fontFamily: "system-ui, sans-serif" }}>
-        <AgentProvider
-          basePath="/api/agent"
-          actionBlocks={{ get_weather: WeatherBlock }}
-          suggestedPrompts={[
-            "What's the weather like in New York?",
-            "Calculate 15% tip on a $87.50 bill.",
-            "Compare the weather in Tokyo vs London.",
-          ]}
-        >
-          {children}
-        </AgentProvider>
+    <html lang="en" style={{ height: "100%" }}>
+      <body style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+        {children}
       </body>
     </html>
   );

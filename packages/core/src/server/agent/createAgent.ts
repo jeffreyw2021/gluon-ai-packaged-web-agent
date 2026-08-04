@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { LoadedConfig } from "../../config/loader";
 import { resolveLanguageModel } from "../model/registry";
 import { requestConfirmation } from "./tools/requestConfirmation";
-import { createReadSkillTool } from "./tools/readSkill";
+import { createLoadSkillTool } from "./tools/readSkill";
 import { createDiscoverToolsTool } from "./tools/discoverTools";
 
 function buildSystemPrompt(config: LoadedConfig, contextParts: string[]): string {
@@ -25,7 +25,7 @@ function buildSystemPrompt(config: LoadedConfig, contextParts: string[]): string
   if (config.skills.length > 0) {
     prompt +=
       "\n\n## Available Skills\n" +
-      "Use the `read_skill` tool to load a skill document before using domain-specific tools.\n\n" +
+      "Use the `load_skill` tool to load a skill document before using domain-specific tools.\n\n" +
       config.skills
         .map((_, i) => `- Index ${i}: Skill document ${i + 1}`)
         .join("\n");
@@ -58,7 +58,7 @@ export async function createAgent(config: LoadedConfig) {
 
   const tools: ToolSet = {};
 
-  tools["request_confirmation"] = requestConfirmation;
+  tools["pause_for_input"] = requestConfirmation;
 
   // Always inject discover_tools when the config has at least one custom tool.
   // It is an internal tool — never visible in agent.config.json.
@@ -67,7 +67,7 @@ export async function createAgent(config: LoadedConfig) {
   }
 
   if (config.skills.length > 0) {
-    tools["read_skill"] = createReadSkillTool(config.skills);
+    tools["load_skill"] = createLoadSkillTool(config.skills);
   }
 
   for (const [name, def] of Object.entries(config.tools)) {

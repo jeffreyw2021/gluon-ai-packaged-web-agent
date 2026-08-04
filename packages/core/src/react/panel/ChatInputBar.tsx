@@ -378,7 +378,7 @@ export function ChatInputBar({
                           borderRadius: 8,
                           background: "var(--gluon-ib-chip-bg)",
                           border: "1px solid var(--gluon-ib-chip-border)",
-                          fontSize: "0.6875rem",
+                          fontSize: "12px",
                           color: "var(--gluon-ib-fg-secondary)",
                           maxWidth: 140,
                         }}
@@ -401,7 +401,7 @@ export function ChatInputBar({
                             style={{
                               flexShrink: 0,
                               color: "#f87171",
-                              fontSize: 10,
+                              fontSize: 12,
                             }}
                           >
                             !
@@ -459,7 +459,7 @@ export function ChatInputBar({
                     <span className="gluon-ib-transcript-dot" />
                     <p
                       style={{
-                        fontSize: "0.875rem",
+                        fontSize: "14px",
                         lineHeight: 1.625,
                         color: "var(--gluon-ib-fg-secondary)",
                         flex: 1,
@@ -490,13 +490,14 @@ export function ChatInputBar({
             runPhase={chatInputRunPhase}
             placeholder={placeholder}
             hasAttachments={safeAttachments.length > 0}
-            styles={{
+              styles={{
               root: { display: "flex", flexDirection: "column" },
               textarea: {
                 width: "100%",
                 background: "transparent",
                 padding: "14px 16px 6px",
-                fontSize: "0.9375rem",
+                fontSize: "14px",
+                fontFamily: "inherit",
                 color: "var(--gluon-ib-fg)",
                 resize: "none",
                 outline: "none",
@@ -597,7 +598,7 @@ export function ChatInputBar({
             className="gluon-ib-disclaimer"
             style={{
               textAlign: "center",
-              fontSize: "0.6rem",
+              fontSize: "11px",
               color: "var(--gluon-ib-disclaimer)",
               marginTop: 6,
               letterSpacing: "0.05em",

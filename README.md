@@ -522,7 +522,7 @@ import { AgentProvider } from "gluon-ai/react";
 | `model`                      | `provider/model` string. See [AI model providers](#ai-model-providers) |
 | `systemPrompt`               | Inline string **or** path to a `.md` / `.txt` file                     |
 | `tools`                      | Map of tool name → `defineTool` module path                            |
-| `skills`                     | Markdown docs the agent can load via built-in `read_skill`             |
+| `skills`                     | Markdown docs the agent can load via built-in `load_skill`             |
 | `context`                    | Providers called fresh every request; injected under `## Context`      |
 | `actionBlocks`               | Tool name → React component path for in-stream UI cards                |
 | `auth.handler`               | `"allow"`                                                              |
@@ -620,8 +620,8 @@ Three built-in tools are always available, regardless of what you configure:
 | Tool                   | When it fires                                                                                                                |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `discover_tools`       | Agent calls this automatically before using any custom tool for the first time to read descriptions and parameter signatures |
-| `request_confirmation` | Called when a tool has `needsApproval: true`; pauses the run and shows a confirmation card in the UI                         |
-| `read_skill`           | Added automatically when `skills` is non-empty; lets the agent load a skill document on demand                               |
+| `pause_for_input`      | Called when a tool has `needsApproval: true`; pauses the run and shows a confirmation card in the UI                         |
+| `load_skill`           | Added automatically when `skills` is non-empty; lets the agent load a skill document on demand                               |
 
 
 
@@ -681,7 +681,7 @@ Set `needsApproval: true` (or a function that inspects the input and returns `tr
 needsApproval: ({ query }) => query.toLowerCase().includes("delete"),
 ```
 
-The `request_confirmation` built-in tool handles the pause/resume handshake automatically. You do not need to wire anything in the UI beyond rendering `ChatMessageList` or `MessageList` (which includes `ConfirmationBlock`).
+The `pause_for_input` built-in tool handles the pause/resume handshake automatically. You do not need to wire anything in the UI beyond rendering `ChatMessageList` or `MessageList` (which includes `ConfirmationBlock`).
 
 ### Scaffolding with the CLI
 
@@ -700,13 +700,13 @@ npx gluon-ai add-tool my_tool
 
 ### What skills are
 
-Skills are Markdown documents the agent **reads on demand**. They are never injected into every request's system prompt. When `skills` is non-empty, gluon adds a `read_skill` tool and instructs the agent to call it before using domain-specific tools. This keeps request context small while giving the agent access to deep documentation when it needs it.
+Skills are Markdown documents the agent **reads on demand**. They are never injected into every request's system prompt. When `skills` is non-empty, gluon adds a `load_skill` tool and instructs the agent to call it before using domain-specific tools. This keeps request context small while giving the agent access to deep documentation when it needs it.
 
 Typical uses: step-by-step procedures, domain glossaries, API cheat-sheets, policy documents.
 
 ### Default behaviour (no skills configured)
 
-`read_skill` is not registered and no skill content is ever sent to the model.
+`load_skill` is not registered and no skill content is ever sent to the model.
 
 ### Creating a skill
 
@@ -735,14 +735,14 @@ when the topic is time-sensitive. Always cite the source URL in your response.
 { "skills": ["./agent/skills/how-to-search.md"] }
 ```
 
-At runtime the agent receives an index of available skills and their numbers. It calls `read_skill(index)` to fetch a document when it decides it's relevant.
+At runtime the agent receives an index of available skills and their numbers. It calls `load_skill(index)` to fetch a document when it decides it's relevant.
 
 ### Skills vs context providers
 
 
 |              | Skills                                      | Context providers                                  |
 | ------------ | ------------------------------------------- | -------------------------------------------------- |
-| When loaded  | On demand by the agent (`read_skill`)       | Every request, unconditionally                     |
+| When loaded  | On demand by the agent (`load_skill`)       | Every request, unconditionally                     |
 | Content type | Static Markdown docs, procedures, reference | Dynamic values: current time, user state, env data |
 | Token cost   | Only when read                              | Always added to every system prompt                |
 

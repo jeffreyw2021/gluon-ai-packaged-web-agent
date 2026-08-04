@@ -36,7 +36,7 @@ const CSS = `
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.8125rem;
+  font-size: 13px;
   color: #525252;
   line-height: 1.375;
   transition: color 0.15s ease;

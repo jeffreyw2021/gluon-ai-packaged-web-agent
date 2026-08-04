@@ -12,6 +12,9 @@ out/
 # Generated files
 packages/core/prisma/generated/
 
+# Local scripts (dev utilities, not part of the published package)
+scripts/
+
 # Source dump artifacts
 .gluon-ai-source-dump.txt
 *.source-dump.txt

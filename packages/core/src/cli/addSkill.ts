@@ -24,7 +24,7 @@ Describe when the agent should apply the knowledge in this file.
 ## Instructions
 
 Add your instructions, examples, and guidance here. The agent will read this
-file when it invokes the \`read_skill\` tool.
+file when it invokes the \`load_skill\` tool.
 
 ## Examples
 

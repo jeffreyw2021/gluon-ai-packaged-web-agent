@@ -24,7 +24,7 @@ const CSS = `
   gap: 4px;
   height: 28px;
   max-width: 110px;
-  font-size: 0.6875rem;
+  font-size: 11px;
   color: #737373;
   padding: 0 8px;
   border-radius: 8px;

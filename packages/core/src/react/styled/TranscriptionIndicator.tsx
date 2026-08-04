@@ -29,7 +29,7 @@ const CSS = `
   box-sizing: border-box;
 }
 .gluon-ti-text {
-  font-size: 0.875rem;
+  font-size: 14px;
   line-height: 1.625;
   flex: 1;
   margin: 0;

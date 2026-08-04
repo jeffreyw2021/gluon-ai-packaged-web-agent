@@ -8,8 +8,7 @@
   },
   "packageManager": "pnpm@9.15.0",
   "workspaces": [
-    "packages/*",
-    "apps/*"
+    "packages/*"
   ],
   "scripts": {
     "build": "pnpm -r build",

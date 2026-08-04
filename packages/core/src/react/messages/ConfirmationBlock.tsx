@@ -47,7 +47,7 @@ interface ConfirmationPart {
 
 function toConfirmationParts(parts: UIMessage["parts"]): ConfirmationPart[] {
   return (parts ?? [])
-    .filter((p) => p.type.startsWith("tool-request_confirmation"))
+    .filter((p) => p.type.startsWith("tool-pause_for_input"))
     .map((p) => p as unknown as ConfirmationPart);
 }
 

@@ -20,7 +20,7 @@ const CSS = `
   padding: 0 8px;
   height: 100%;
   border-radius: 6px;
-  font-size: 0.6875rem;
+  font-size: 11px;
   border: none;
   cursor: pointer;
   background: transparent;

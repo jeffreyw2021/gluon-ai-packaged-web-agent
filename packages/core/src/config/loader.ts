@@ -36,7 +36,13 @@ let cached: LoadedConfig | null = null;
 function resolveConfigPath(): string {
   const envPath = process.env.AGENT_CONFIG_PATH;
   if (envPath) return path.resolve(envPath);
-  return path.resolve(process.cwd(), "agent.config.json");
+
+  // Check project root first (Docker / flat layout)
+  const rootPath = path.resolve(process.cwd(), "agent.config.json");
+  if (fs.existsSync(rootPath)) return rootPath;
+
+  // Fall back to gluon/ subfolder (Node.js process mode default layout)
+  return path.resolve(process.cwd(), "gluon", "agent.config.json");
 }
 
 function resolveRelativePath(base: string, relativePath: string): string {

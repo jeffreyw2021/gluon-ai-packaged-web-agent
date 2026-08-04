@@ -1,0 +1,9 @@
+{
+  "name": "gluon-agent",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "gluon-ai": "beta",
+    "@ai-sdk/openai": "3"
+  }
+}

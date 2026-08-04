@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["easy-setup-web-agent"],
+  /* config options here */
 };
 
 export default nextConfig;
