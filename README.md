@@ -2,7 +2,7 @@
 
 > **Beta** project, rough edges expected.
 
-Sometimes you want to build an AI-native product from scratch. Sometimes you just want an agent inside an existing product. The backend for that second case is mostly the same every time: chats, streaming, tools, a worker, Redis, a DB. Gluon packages that stack — as a standalone Docker container — so you can drop an agent into any web app and focus on the product side.
+Sometimes you want to build an AI-native product from scratch. Sometimes you just want an agent inside an existing product. The backend for that second case is mostly the same every time: chats, streaming, tools, a worker, Redis, a DB. Gluon packages that stack so you can drop an agent into any web app and focus on the product side.
 
 Works with any React frontend: Next.js, Vite, Remix, SvelteKit, or anything else.
 
@@ -16,7 +16,7 @@ Built for my workflow. Shared in case it's useful.
 | Requirement            | Notes                                                                                                                        |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Any React 19+ frontend | Next.js, Vite, Remix, SvelteKit, or a plain React app                                                                        |
-| Docker (local dev)     | For local development via `docker compose`. Not required in production — `gluon-ai start` runs as a plain Node process too   |
+| Docker (optional)      | Handy for local postgres/redis (and optionally Gluon itself). Not required — `gluon-ai start` is a plain Node process        |
 | PostgreSQL             | Bundled in the dev compose file. In production: any managed Postgres (RDS, Neon, Cloud SQL, etc.)                            |
 | Redis                  | Bundled in the dev compose file. In production: any Redis-compatible service (Upstash, ElastiCache, etc.)                    |
 | AI provider            | OpenAI, Anthropic, Google, Mistral, Groq, xAI, DeepSeek, or Vercel AI Gateway. See [AI model providers](#ai-model-providers) |
@@ -59,91 +59,16 @@ GLUON_CORS_ORIGIN=*
 npx gluon-ai init
 ```
 
-The wizard asks four questions: AI provider, model, port, and **run mode**. Run mode is the key choice:
+Creates a `gluon/` folder (`agent.config.json`, system prompt, tools, context) and asks for provider, model, port, and **run mode**:
 
-| | Docker | Node.js process |
+| Run mode | What `init` does | How you start |
 |---|---|---|
-| Gluon runs as | Docker container | Plain `node` process alongside your app |
-| Requires Docker | Yes (to run Gluon) | Only for infra (postgres + redis) — or skip if you supply your own |
-| Best for | Isolated, production-like setup | Faster local dev, existing infra |
+| **Node.js** (default) | Writes `docker-compose.infra.yml` (postgres + redis only) and injects `gluon-ai start` into `npm run dev` via `concurrently` | `docker compose -f gluon/docker-compose.infra.yml up -d` once, then `npm run dev` |
+| **Docker** | Writes a full `Dockerfile` + `docker-compose.yml` (Gluon + postgres + redis) and brings the stack up | `docker compose -f gluon/docker-compose.yml up -d --build` (re-run if the auto-start failed) |
 
----
+Skip the compose infra step if you already have Postgres and Redis pointing at `AGENT_DATABASE_URL` / `REDIS_URL`. Health check: `curl http://localhost:3001/config`.
 
-#### Option 1 — Docker
-
-Generates a full container stack. The `gluon/` folder looks like this:
-
-```
-your-project/
-  gluon/
-    agent.config.json          ← model, tools, context, auth
-    Dockerfile                 ← installs gluon-ai@beta; CMD gluon-ai start
-    docker-compose.yml         ← gluon container + postgres:17 + redis:8
-    agent/
-      package.json
-      system-prompt.md
-      tools/webSearch.ts       ← uses defineTool from "gluon-ai"
-      context/datetime.ts
-  .env.example                 ← pre-filled with compose defaults
-```
-
-`init` automatically runs `docker compose -f gluon/docker-compose.yml up -d --build` at the end. If it fails (Docker not running, env vars missing), re-run manually:
-
-```bash
-docker compose -f gluon/docker-compose.yml up -d --build
-```
-
-The container applies the DB schema on startup and starts the BullMQ worker. Health check:
-
-```bash
-curl http://localhost:3001/config
-```
-
----
-
-#### Option 2 — Node.js process
-
-No Dockerfile is generated. Instead, `init`:
-
-1. Writes `gluon/docker-compose.infra.yml` — postgres + redis only, no Gluon container.
-2. Injects `gluon-ai start` into your existing `npm run dev` script using `concurrently`, so Gluon starts automatically when you develop:
-
-```json
-"scripts": {
-  "dev:app":      "next dev",
-  "gluon:start":  "node --env-file=.env ./node_modules/.bin/gluon-ai start",
-  "dev":          "concurrently -n gluon,app -c blue,green \"npm run gluon:start\" \"npm run dev:app\""
-}
-```
-
-The `gluon/` folder is leaner:
-
-```
-your-project/
-  gluon/
-    agent.config.json
-    docker-compose.infra.yml   ← postgres + redis only (no gluon container)
-    agent/
-      package.json
-      system-prompt.md
-      tools/webSearch.ts
-      context/datetime.ts
-  .env.example
-```
-
-Start infra once (or skip if you already have postgres + redis):
-
-```bash
-docker compose -f gluon/docker-compose.infra.yml up -d
-```
-
-Then run your app as usual — Gluon starts alongside it:
-
-```bash
-npm run dev
-```
-
-
+For production hosting, see [Deployment](#deployment).
 
 ### Step 4 — Add to your frontend
 
@@ -165,83 +90,34 @@ That's enough for a working agent with web search, multi-chat, streaming, and th
 
 
 
-## Deployment modes
+## Deployment
 
-Docker is not required to run Gluon. `gluon-ai start` is a plain Node.js process — the Dockerfile that `init` generates is one convenient packaging option, not a prerequisite.
+`gluon-ai start` is a plain Node process. Docker is optional packaging. Point `AGENT_DATABASE_URL` and `REDIS_URL` at managed Postgres/Redis (or share your app's), set your provider key, and keep Gluon off the public internet via the [same-origin proxy](#same-origin-proxy-recommended-for-production).
 
-### Mode A — Same server, no Docker (EC2, bare VM, any VPS)
+| Where the host app runs | How to run Gluon | Tools → host app |
+| ----------------------- | ---------------- | ---------------- |
+| Same VM / EC2           | `pm2 start "gluon-ai start" --name gluon` | `http://localhost:3000` (~0 ms) |
+| Docker Compose          | Add a `gluon` service (`build: ./gluon`, share the same Postgres/Redis) | `http://myapp:3000` (~0.5 ms) |
+| Kubernetes / ECS        | Sidecar in the same pod/task | loopback / service name |
+| Vercel / serverless     | Separate container (Railway, Fly, Cloud Run); set `GLUON_UPSTREAM_URL` on the proxy | cross-service (~5–30 ms) |
 
-Run Gluon as a sibling process on the same machine as your app:
+Example — sibling process on a VM:
 
 ```bash
-npm install -g gluon-ai@beta tsx
 pm2 start "gluon-ai start" --name gluon
 ```
 
-Set env vars on the server:
-
-```env
-AGENT_DATABASE_URL=postgresql://...    # RDS, Cloud SQL, or same DB the app uses
-REDIS_URL=redis://...                  # ElastiCache, Upstash, or existing Redis
-OPENAI_API_KEY=...
-PORT=3001
-GLUON_CORS_ORIGIN=https://myapp.com
-```
-
-In tools, call the host app at `http://localhost:3000` — zero network overhead.
-
-### Mode B — Docker Compose sidecar (host app already uses Docker)
-
-Add Gluon as one more service to your existing `docker-compose.yml`:
+Example — compose sidecar (internal port only):
 
 ```yaml
-services:
-  myapp:
-    build: .
-    ports: ["3000:3000"]
-
-  gluon:
-    build: ./gluon
-    expose: ["3001"] # internal only — not exposed to the internet
-    environment:
-      AGENT_DATABASE_URL: postgresql://user:pass@postgres:5432/mydb # SAME DB
-      REDIS_URL: redis://redis:6379 # SAME Redis
-      GLUON_CORS_ORIGIN: http://localhost:3000
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
+gluon:
+  build: ./gluon
+  expose: ["3001"]
+  environment:
+    AGENT_DATABASE_URL: postgresql://user:pass@postgres:5432/mydb
+    REDIS_URL: redis://redis:6379
+    GLUON_CORS_ORIGIN: http://localhost:3000
 ```
-
-Tools call the host app at `http://myapp:3000` (Docker service name), ~0.5 ms.
-
-### Mode C — Standalone container (serverless host app)
-
-If the host backend is on Vercel, AWS Lambda, or another serverless platform, deploy Gluon as a separate container service (Cloud Run, Railway, Fly.io, ECS Fargate):
-
-```bash
-docker build -f gluon/Dockerfile gluon/ -t my-app-gluon:latest
-# Deploy to Cloud Run / Railway / Fly.io / ECS Fargate
-
-# Proxy through your Next.js Route Handler (already created by init).
-# Set GLUON_UPSTREAM_URL to the container's internal or public URL:
-# GLUON_UPSTREAM_URL=https://my-app-gluon.railway.app
-```
-
-
-
-### Platform decision guide
-
-
-| Host app deployment       | Gluon deployment                                | Latency to host app        |
-| ------------------------- | ----------------------------------------------- | -------------------------- |
-| Bare VM / EC2 (no Docker) | `pm2 start "gluon-ai start"` on same server     | ~0 ms (localhost)          |
-| Docker Compose            | Add `gluon` service to existing compose         | ~0.5 ms (Docker network)   |
-| Kubernetes                | Sidecar container in same pod                   | ~0 ms (loopback)           |
-| ECS / Cloud Run           | Second container in same task / same region     | ~0.5–2 ms                  |
-| Vercel / serverless       | Separate container on Railway / Fly / Cloud Run | ~5–30 ms (cross-service)   |
-| Railway / Render / Fly    | Additional service in same project              | ~1–2 ms (internal network) |
-
 
 ---
 
