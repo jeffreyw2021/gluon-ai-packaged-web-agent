@@ -99,15 +99,32 @@ const DEFAULT_SPACING: Required<MessageSpacing> = {
 
 function resolveMarginBottom(
   currentRole: string,
-  nextRole: string | undefined,
+  immediateNextRole: string | undefined,
   spacing: Required<MessageSpacing>,
 ): string {
   // Last message gets no margin — an explicit end spacer handles afterLast so
   // the gap survives `height:100%` / overflow clipping and sits below any
   // trailing ThoughtWindow rendered after the final user turn.
-  if (nextRole === undefined) return "0";
+  if (immediateNextRole === undefined) return "0";
+
+  // System markers (e.g. "Summarized") should sit close to the preceding
+  // message. Park the large turn gap *below* the marker, not above it —
+  // otherwise inserting a user message after summarize shoves the tag down.
+  if (currentRole === "system") {
+    if (immediateNextRole === "user") return spacing.betweenTurns;
+    if (immediateNextRole === "assistant") return spacing.afterUser;
+    return spacing.defaultGap;
+  }
+
+  // System CSS supplies a small top pad; keep prior message flush to it.
+  if (immediateNextRole === "system") {
+    return "0";
+  }
+
   if (currentRole === "user") return spacing.afterUser;
-  if (currentRole === "assistant" && nextRole === "user") return spacing.betweenTurns;
+  if (currentRole === "assistant" && immediateNextRole === "user") {
+    return spacing.betweenTurns;
+  }
   return spacing.defaultGap;
 }
 
@@ -222,22 +239,18 @@ export function MessageList({
 
       {messages.map((msg, i) => {
         const isLast = i === messages.length - 1;
-        // Skip system messages when looking for the next rendered role so that
-        // a system marker between two turns doesn't collapse the spacing.
-        const nextRole = messages
-          .slice(i + 1)
-          .find((m) => m.role !== "system")?.role;
+        const immediateNextRole = messages[i + 1]?.role;
         const mb =
           spacing !== false
-            ? resolveMarginBottom(msg.role, nextRole, spacing)
+            ? resolveMarginBottom(msg.role, immediateNextRole, spacing)
             : undefined;
         const msgStyle: CSSProperties | undefined =
           mb !== undefined ? { marginBottom: mb } : undefined;
 
         if (msg.role === "system") {
-          // System messages (e.g. context-compression markers) handle their own
-          // spacing via CSS; skip the regular marginBottom logic entirely.
-          return <SystemMessageComp key={msg.id} message={msg} />;
+          return (
+            <SystemMessageComp key={msg.id} message={msg} style={msgStyle} />
+          );
         }
 
         if (msg.role === "user") {

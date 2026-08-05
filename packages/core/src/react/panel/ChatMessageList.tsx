@@ -22,12 +22,7 @@ import type { UserMessageProps } from "../messages/UserMessage";
 import type { AssistantMessageProps } from "../messages/AssistantMessage";
 import type { ThoughtWindowProps } from "../messages/thoughts/ThoughtWindow";
 import type { SystemMessageProps } from "../messages/SystemMessage";
-import {
-  FileText,
-  Globe,
-  Workflow,
-  Search,
-} from "lucide-react";
+import { FileText, Globe, Lightbulb, Workflow, Search } from "lucide-react";
 
 // ── Scoped styles ──────────────────────────────────────────────────────────
 
@@ -37,8 +32,8 @@ const MESSAGE_LIST_CSS = `
     50%       { opacity: 1; }
   }
   @keyframes metallic-sweep {
-    0%   { transform: translate(-28%, -28%); }
-    100% { transform: translate(28%, 28%); }
+    0%   { background-position: 120% 50%; }
+    100% { background-position: -20% 50%; }
   }
   @keyframes gluon-pulse {
     0%, 100% { opacity: 1; }
@@ -61,7 +56,14 @@ const MESSAGE_LIST_CSS = `
     --gluon-ml-icon: #737373;
     --gluon-ml-loader-base: #d4d4d4;
     --gluon-ml-loader-active: #525252;
-    --gluon-ml-sweep: linear-gradient(118deg, transparent 0%, transparent 34%, rgba(255,255,255,0.05) 40%, rgba(255,255,255,0.22) 46%, rgba(248,252,255,0.52) 50%, rgba(255,255,255,0.22) 54%, rgba(255,255,255,0.05) 60%, transparent 66%, transparent 100%);
+    --gluon-ml-sweep: linear-gradient(
+      105deg,
+      var(--gluon-ml-fg-muted) 0%,
+      var(--gluon-ml-fg-muted) 42%,
+      #ffffff 50%,
+      var(--gluon-ml-fg-muted) 58%,
+      var(--gluon-ml-fg-muted) 100%
+    );
   }
   [data-gluon-msglist][data-dark] {
     --gluon-ml-fg: #f5f5f5;
@@ -73,7 +75,14 @@ const MESSAGE_LIST_CSS = `
     --gluon-ml-icon: #909090;
     --gluon-ml-loader-base: #525252;
     --gluon-ml-loader-active: #d4d4d4;
-    --gluon-ml-sweep: linear-gradient(118deg, transparent 0%, transparent 34%, rgba(255,255,255,0.04) 40%, rgba(255,255,255,0.14) 46%, rgba(255,255,255,0.32) 50%, rgba(255,255,255,0.14) 54%, rgba(255,255,255,0.04) 60%, transparent 66%, transparent 100%);
+    --gluon-ml-sweep: linear-gradient(
+      105deg,
+      var(--gluon-ml-fg-muted) 0%,
+      var(--gluon-ml-fg-muted) 42%,
+      #ffffff 50%,
+      var(--gluon-ml-fg-muted) 58%,
+      var(--gluon-ml-fg-muted) 100%
+    );
   }
 
   [data-gluon-msglist]::-webkit-scrollbar { display: none; }
@@ -91,13 +100,25 @@ const MESSAGE_LIST_CSS = `
     transition: color 0.15s ease;
   }
   .gluon-ml-thought-header:hover { color: var(--gluon-ml-fg-secondary); }
+  .gluon-ml-thought-body {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .gluon-ml-thought-body-icon {
+    flex-shrink: 0;
+    margin-top: 2px; /* top-align with 12px / 1.625 thought text */
+    color: var(--gluon-ml-icon); /* match ToolRow icon */
+  }
 
   /* ── System message (context markers, status labels) ──────────────── */
   .gluon-ml-system-msg {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin: 6px 0;
+    /* Top pad only — bottom gap comes from MessageList spacing so the
+       Summarized marker stays anchored under the prior message. */
+    margin: 6px 0 0;
     width: 100%;
   }
   .gluon-ml-system-msg::before,
@@ -165,14 +186,26 @@ const MESSAGE_LIST_CSS = `
   .gluon-ml-prompt-btn:hover .gluon-ml-prompt-icon { color: var(--gluon-ml-fg-secondary); }
 
   /* ── Markdown output (assistant messages) ─────────────────────────── */
-  .gluon-md {
+  /* Explicit color on container + block children so host page paragraph
+     rules cannot wash assistant text to muted grey. */
+  [data-gluon-msglist] .gluon-md {
     width: 100%;
     font-size: 14px;
     line-height: 1.65;
-    color: #1a1a1a;
+    color: var(--gluon-ml-fg);
     word-break: break-word;
   }
-  [data-gluon-msglist][data-dark] .gluon-md { color: #ebebeb; }
+  /* Explicit fg on blocks + markers — host ul/ol color rules (and ::marker
+     quirks) otherwise leave bullets muted while list text stays bright. */
+  [data-gluon-msglist] .gluon-md p,
+  [data-gluon-msglist] .gluon-md ul,
+  [data-gluon-msglist] .gluon-md ol,
+  [data-gluon-msglist] .gluon-md li {
+    color: var(--gluon-ml-fg);
+  }
+  [data-gluon-msglist] .gluon-md li::marker {
+    color: currentColor;
+  }
   .gluon-md p {
     font-size: 14px;
     line-height: 1.65;
@@ -335,48 +368,38 @@ function useRotatingVerb(enabled: boolean): string {
 // ── Animated thinking label ────────────────────────────────────────────────
 
 function ThinkingLabel({ verb }: { verb: string }) {
+  // Shimmer is painted via background-clip:text so the highlight follows
+  // glyph shapes — an overlay + mix-blend-mode only clips to the text box.
   return (
     <span
       className="agent-panel-breathe"
       style={{
-        position: "relative",
         display: "inline-block",
-        overflow: "hidden",
-        isolation: "isolate",
+        fontSize: "13px",
+        fontWeight: 500,
+        fontStyle: "italic",
+        textTransform: "capitalize",
+        lineHeight: 1,
+        paddingBottom: "0.125rem",
+        paddingRight: "0.25rem",
+        backgroundImage: "var(--gluon-ml-sweep)",
+        backgroundSize: "220% 100%",
+        backgroundRepeat: "no-repeat",
+        backgroundClip: "text",
+        WebkitBackgroundClip: "text",
+        color: "transparent",
+        WebkitTextFillColor: "transparent",
+        animation: "metallic-sweep 2.8s linear infinite",
       }}
     >
-      <span
-        style={{
-          fontSize: "13px",
-          fontWeight: 500,
-          fontStyle: "italic",
-          textTransform: "capitalize",
-          color: "var(--gluon-ml-fg-muted)",
-          lineHeight: 1,
-          paddingBottom: "0.125rem",
-          paddingRight: "0.25rem",
-          display: "inline-block",
-        }}
-      >
-        {verb}
-      </span>
-      <span
-        style={{
-          position: "absolute",
-          pointerEvents: "none",
-          inset: "-120%",
-          background: "var(--gluon-ml-sweep)",
-          mixBlendMode: "overlay",
-          animation: "metallic-sweep 2.8s linear infinite",
-        }}
-      />
+      {verb}
     </span>
   );
 }
 
 // ── System message (inline status divider) ─────────────────────────────────
 
-function StyledSystemMessage({ message }: SystemMessageProps) {
+function StyledSystemMessage({ message, style }: SystemMessageProps) {
   const raw =
     message.parts?.find(
       (p): p is { type: "text"; text: string } => p.type === "text",
@@ -402,6 +425,7 @@ function StyledSystemMessage({ message }: SystemMessageProps) {
     <SystemMessage
       message={displayMessage}
       className="gluon-ml-system-msg"
+      style={style}
     />
   );
 }
@@ -481,7 +505,11 @@ function ToolIcon({ icon }: { icon?: string }) {
   const Icon =
     icon && TOOL_ICON_REGISTRY[icon] ? TOOL_ICON_REGISTRY[icon] : Workflow;
   return (
-    <Icon size={15} strokeWidth={1.5} style={{ color: "var(--gluon-ml-icon)", flexShrink: 0 }} />
+    <Icon
+      size={15}
+      strokeWidth={1.5}
+      style={{ color: "var(--gluon-ml-icon)", flexShrink: 0 }}
+    />
   );
 }
 
@@ -508,13 +536,13 @@ function ToolRow({
         display: "flex",
         alignItems: "center",
         gap: 4,
-        marginBottom: isLast ? 0 : 10,
+        marginBottom: isLast ? 0 : 6,
       }}
     >
       {isRunning ? <DiagonalScanLoader /> : <ToolIcon icon={ui?.icon} />}
       <span
         style={{
-          fontSize: "13px",
+          fontSize: "12px",
           fontWeight: 500,
           color: "var(--gluon-ml-fg-muted)",
           flex: 1,
@@ -603,7 +631,8 @@ function StyledThoughtWindow({
         <div
           style={{
             overflow: "hidden",
-            transition: "max-height 250ms ease-in-out, opacity 250ms ease-in-out",
+            transition:
+              "max-height 250ms ease-in-out, opacity 250ms ease-in-out",
             maxHeight: expanded ? 300 : 0,
             opacity: expanded ? 1 : 0,
           }}
@@ -613,6 +642,7 @@ function StyledThoughtWindow({
             className="gluon-ml-thought-scroll"
             style={{
               marginTop: 8,
+              paddingBottom: 8,
               overflowY: "auto",
               overflowX: "hidden",
               maxHeight: "11rem",
@@ -628,18 +658,30 @@ function StyledThoughtWindow({
               />
             ))}
             {reasoningText && (
-              <p
-                style={{
-                  fontSize: "12px",
-                  lineHeight: 1.625,
-                  color: "var(--gluon-ml-fg-muted)",
-                  whiteSpace: "pre-wrap",
-                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                  margin: toolInvocations?.length ? "8px 0 0" : "0",
-                }}
+              <div
+                className="gluon-ml-thought-body"
+                style={{ margin: toolInvocations?.length ? "6px 0 0" : "0" }}
               >
-                {reasoningText}
-              </p>
+                <Lightbulb
+                  className="gluon-ml-thought-body-icon"
+                  size={14}
+                  strokeWidth={2}
+                  aria-hidden
+                />
+                <p
+                  style={{
+                    fontSize: "12px",
+                    lineHeight: 1.625,
+                    color: "var(--gluon-ml-fg-muted)",
+                    whiteSpace: "pre-wrap",
+                    margin: 0,
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  {reasoningText}
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -693,12 +735,12 @@ function StyledUserMessage({ message, style }: UserMessageProps) {
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
-                  padding: "6px 10px",
-                  borderRadius: 12,
-                  background: "var(--gluon-ml-bubble)",
-                  fontSize: "12px",
-                  color: "var(--gluon-ml-fg-secondary)",
-                  maxWidth: 180,
+                    padding: "6px 10px",
+                    borderRadius: 12,
+                    background: "var(--gluon-ml-bubble)",
+                    fontSize: "12px",
+                    color: "var(--gluon-ml-fg-secondary)",
+                    maxWidth: 180,
                   }}
                 >
                   <FileText
@@ -774,10 +816,26 @@ function ChatLoadingSkeleton() {
           style={{ ...skelBase, height: 28, width: 176, borderRadius: 8 }}
         />
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
-        <div className="gluon-ml-skel-block" style={{ ...skelBase, height: 12, width: "60%" }} />
-        <div className="gluon-ml-skel-block" style={{ ...skelBase, height: 12, width: "90%" }} />
-        <div className="gluon-ml-skel-block" style={{ ...skelBase, height: 12, width: "75%" }} />
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 4,
+          width: "100%",
+        }}
+      >
+        <div
+          className="gluon-ml-skel-block"
+          style={{ ...skelBase, height: 12, width: "60%" }}
+        />
+        <div
+          className="gluon-ml-skel-block"
+          style={{ ...skelBase, height: 12, width: "90%" }}
+        />
+        <div
+          className="gluon-ml-skel-block"
+          style={{ ...skelBase, height: 12, width: "75%" }}
+        />
       </div>
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <div
@@ -785,9 +843,22 @@ function ChatLoadingSkeleton() {
           style={{ ...skelBase, height: 28, width: 128, borderRadius: 8 }}
         />
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
-        <div className="gluon-ml-skel-block" style={{ ...skelBase, height: 12, width: "80%" }} />
-        <div className="gluon-ml-skel-block" style={{ ...skelBase, height: 12, width: "55%" }} />
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 4,
+          width: "100%",
+        }}
+      >
+        <div
+          className="gluon-ml-skel-block"
+          style={{ ...skelBase, height: 12, width: "80%" }}
+        />
+        <div
+          className="gluon-ml-skel-block"
+          style={{ ...skelBase, height: 12, width: "55%" }}
+        />
       </div>
     </div>
   );
@@ -876,10 +947,7 @@ export function ChatMessageList({
   autoScroll = false,
   darkMode = false,
 }: ChatMessageListProps) {
-  const {
-    adapter,
-    toolUi: _toolUi,
-  } = useAgentContext();
+  const { adapter, toolUi: _toolUi } = useAgentContext();
 
   const {
     messages,
@@ -980,7 +1048,11 @@ export function ChatMessageList({
             autoScroll={autoScroll}
             // minHeight (not height): list must grow with content so the end
             // spacer contributes to scrollHeight and isn't clipped.
-            style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              minHeight: "100%",
+            }}
             components={{
               UserMessage: (slots?.userMessage ??
                 StyledUserMessage) as ComponentType<UserMessageProps>,

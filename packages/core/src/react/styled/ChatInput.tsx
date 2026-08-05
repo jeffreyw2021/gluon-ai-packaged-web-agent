@@ -24,7 +24,7 @@ const CSS = `
 .gluon-chat-input-textarea {
   width: 100%;
   background: transparent;
-  padding: 14px 16px 6px;
+  padding: 14px 16px;
   font-size: 14px;
   color: #262626;
   resize: none;
@@ -130,7 +130,7 @@ export const ChatInput = React.forwardRef<ChatInputHandle, ChatInputProps>(
               textarea: {
                 width: "100%",
                 background: "transparent",
-                padding: "14px 16px 6px",
+                padding: "14px 16px",
                 fontSize: "14px",
                 color: darkMode ? "#e5e5e5" : "#262626",
                 resize: "none",
@@ -144,7 +144,7 @@ export const ChatInput = React.forwardRef<ChatInputHandle, ChatInputProps>(
                 fontFamily: "inherit",
               } as CSSProperties,
             }}
-            renderSubmitButton={renderSubmitButton}
+            renderSubmitButton={renderSubmitButton ?? (() => null)}
           />
         </div>
       </>

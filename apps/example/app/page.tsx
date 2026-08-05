@@ -22,7 +22,7 @@ export default function WorkspacePage() {
       <div style={{ flex: 1, minWidth: 0, overflowY: "auto" }} />
 
       {/* right panel */}
-      <div style={{ width: 420, flexShrink: 0, height: "100%" }}>
+      <div style={{ width: 420, flexShrink: 0, height: "100%", borderLeft: "1px solid #e0e0e0" }}>
         <GluonAgentPanel basePath="/api/gluon" />
       </div>
     </div>

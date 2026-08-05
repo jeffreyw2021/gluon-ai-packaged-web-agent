@@ -1,0 +1,665 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens ─────────────────────────────────────────────────────── */
+:root {
+  --bg: #0a0a0b;
+  --surface: #141415;
+  --surface-2: #1a1a1c;
+  --border: #1f1f23;
+  --border-2: #2a2a2f;
+  --text-1: #e5e5e7;
+  --text-2: #8b8b96;
+  --text-3: #55555e;
+  --accent: #c8ff00;
+  --accent-dim: #8fb800;
+  --accent-muted: rgba(200, 255, 0, 0.12);
+  --code-bg: #111113;
+}
+
+/* ── Base reset ─────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text-1);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-3);
+}
+
+/* ── Typography ─────────────────────────────────────────────────────────── */
+.doc-content h1 {
+  font-size: 1.875rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--text-1);
+  margin: 0 0 0.5rem;
+  line-height: 1.2;
+}
+
+.doc-content h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+  margin: 2.5rem 0 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.doc-content h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-1);
+  margin: 1.75rem 0 0.5rem;
+}
+
+.doc-content h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.doc-content p {
+  color: var(--text-2);
+  margin: 0 0 0.875rem;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.doc-content ul,
+.doc-content ol {
+  color: var(--text-2);
+  padding-left: 1.25rem;
+  margin: 0 0 0.875rem;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.doc-content li {
+  margin-bottom: 0.25rem;
+}
+
+.doc-content li+li {
+  margin-top: 0.25rem;
+}
+
+.doc-content a {
+  color: var(--text-1);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border-2);
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.doc-content a:hover {
+  color: var(--text-1);
+  border-color: var(--text-2);
+}
+
+.doc-content code {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.8em;
+  background: var(--surface-2);
+  color: var(--text-1);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  border: 1px solid var(--border-2);
+}
+
+.doc-content pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  border: none;
+  font-size: 1em;
+}
+
+.doc-content blockquote {
+  border-left: 2px solid var(--border-2);
+  margin: 1rem 0;
+  padding: 0.5rem 1rem;
+  background: var(--surface-2);
+  border-radius: 0 6px 6px 0;
+}
+
+.doc-content blockquote p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.doc-content blockquote strong {
+  color: var(--text-1);
+  font-style: normal;
+}
+
+/* ── Page layout ────────────────────────────────────────────────────────── */
+.layout-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.layout-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.layout-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  overflow-y: auto;
+  position: sticky;
+  top: 48px;
+  height: calc(100vh - 48px);
+}
+
+.layout-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  /* No max-width here — main fills all remaining width so the
+     scrollbar sits at the true right edge of the viewport. */
+}
+
+.layout-main-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2.5rem 3rem 4rem;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.site-header {
+  height: 48px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  padding: 0 1.25rem;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ── Nav ────────────────────────────────────────────────────────────────── */
+.nav-group-label {
+  font-size: 0.675rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  padding: 1rem 1rem 0.35rem;
+}
+
+.nav-link {
+  display: block;
+  font-size: 0.825rem;
+  color: var(--text-2);
+  padding: 0.35rem 1rem;
+  border-radius: 4px;
+  margin: 1px 0.35rem;
+  text-decoration: none;
+  transition: color 0.12s, background 0.12s;
+  cursor: pointer;
+}
+
+.nav-link:hover {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+
+.nav-link.active {
+  color: var(--accent);
+  background: var(--accent-muted);
+  font-weight: 500;
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────────── */
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.825rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.doc-table th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-weight: 500;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-2);
+}
+
+.doc-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2);
+  vertical-align: top;
+}
+
+.doc-table tr:last-child td {
+  border-bottom: none;
+}
+
+.doc-table td:first-child {
+  color: var(--text-1);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.78rem;
+}
+
+.doc-table code {
+  font-size: 0.78rem;
+}
+
+/* ── Step list ──────────────────────────────────────────────────────────── */
+.step-item {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  color: var(--text-2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.step-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Callout ────────────────────────────────────────────────────────────── */
+.callout {
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-left: 3px solid var(--border-2);
+  border-radius: 6px;
+  padding: 0.875rem 1rem;
+  margin: 1rem 0 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-2);
+  line-height: 1.65;
+}
+
+.callout strong {
+  color: var(--text-1);
+}
+
+.callout code {
+  font-size: 0.8em;
+}
+
+/* ── Badge ──────────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.badge-beta {
+  background: rgba(200, 255, 0, 0.1);
+  color: var(--accent);
+  border: 1px solid rgba(200, 255, 0, 0.25);
+}
+
+/* ── Component demo panels ──────────────────────────────────────────────── */
+.demo-panel {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+  background: var(--surface);
+}
+
+.demo-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  padding: 0 1px;
+  gap: 0;
+}
+
+.demo-tab {
+  padding: 0.6rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+  user-select: none;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+
+.demo-tab:hover {
+  color: var(--text-1);
+}
+
+.demo-tab.active {
+  color: var(--text-1);
+  border-bottom-color: var(--text-1);
+}
+
+.demo-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 360px;
+}
+
+.demo-preview {
+  border-right: 1px solid var(--border);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.demo-code {
+  background: var(--code-bg);
+  overflow: auto;
+  font-size: 0.78rem;
+}
+
+.demo-code pre {
+  margin: 0;
+  padding: 1.25rem 1.5rem;
+  white-space: pre;
+  overflow: auto;
+  height: 100%;
+}
+
+/* ── Mock chat UI ───────────────────────────────────────────────────────── */
+.mock-chat {
+  width: 100%;
+  max-width: 300px;
+  height: 320px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-size: 12px;
+}
+
+.mock-topbar {
+  height: 40px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mock-topbar-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-1);
+  flex: 1;
+}
+
+.mock-mode-pill {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-weight: 600;
+  border: 1px solid var(--border-2);
+}
+
+.mock-messages {
+  flex: 1;
+  overflow: hidden;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mock-bubble {
+  padding: 6px 9px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  max-width: 85%;
+}
+
+.mock-bubble.user {
+  background: var(--surface-2);
+  color: var(--text-1);
+  border: 1px solid var(--border-2);
+  align-self: flex-end;
+}
+
+.mock-bubble.assistant {
+  background: var(--surface-2);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  align-self: flex-start;
+}
+
+.mock-tool-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--text-3);
+  padding: 3px 6px;
+  background: var(--code-bg);
+  border-radius: 4px;
+  align-self: flex-start;
+  border: 1px solid var(--border);
+}
+
+.mock-tool-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-3);
+  flex-shrink: 0;
+}
+
+.mock-input {
+  height: 40px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.mock-input-field {
+  flex: 1;
+  height: 24px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 8px;
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+.mock-send-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: var(--text-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mock-send-btn svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* ── Atomic components mock ─────────────────────────────────────────────── */
+.mock-atomic-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.mock-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mock-btn {
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: default;
+}
+
+.mock-btn.primary {
+  background: var(--text-1);
+  color: var(--bg);
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.mock-btn.ghost {
+  background: transparent;
+}
+
+.mock-select {
+  flex: 1;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.mock-pills {
+  display: flex;
+  gap: 2px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.mock-pill {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-3);
+  cursor: default;
+}
+
+.mock-pill.active {
+  background: var(--surface-2);
+  color: var(--text-1);
+}
+
+/* ── Headless mock ──────────────────────────────────────────────────────── */
+.mock-headless {
+  width: 100%;
+  max-width: 280px;
+  font-size: 11px;
+}
+
+.mock-hook-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.mock-hook-name {
+  color: var(--text-1);
+  font-family: monospace;
+  font-size: 10px;
+  min-width: 130px;
+}
+
+.mock-hook-desc {
+  color: var(--text-3);
+  font-size: 10px;
+}

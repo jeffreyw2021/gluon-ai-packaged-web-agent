@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.90",
-    "gluon-ai": "^0.1.0-beta.109",
+    "gluon-ai": "^0.1.0-beta.124",
     "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
