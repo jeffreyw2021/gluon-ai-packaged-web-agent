@@ -40,7 +40,7 @@ jobs:
       - name: Build
         working-directory: apps/documentation
         env:
-          VITE_BASE_PATH: /gluon-ai-packaged-web-agent/
+          VITE_BASE_PATH: /gluon-ai-agent/
         run: npm run build
 
       - name: Upload Pages artifact
